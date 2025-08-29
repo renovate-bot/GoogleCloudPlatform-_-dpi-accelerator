@@ -1,0 +1,25 @@
+modules:
+  - repo: https://github.com/beckn/beckn-onix
+    version: cdb9deb9cdecf031dc789bf9c308686e8ad76fbd
+    name: github.com/beckn/beckn-onix
+    plugins:
+      schemavalidator: pkg/plugin/implementation/schemavalidator/cmd
+      signvalidator: pkg/plugin/implementation/signvalidator/cmd
+      router: pkg/plugin/implementation/router/cmd
+      reqpreprocessor: pkg/plugin/implementation/reqpreprocessor/cmd
+      signer: pkg/plugin/implementation/signer/cmd
+    images:
+      adapter:
+        dockerfile: Dockerfile.adapter
+        tag: latest
+  - name: github.com/google/dpi-accelerator/beckn-onix
+    path: onix
+    plugins:
+      rediscache: plugins/rediscache/cmd
+      pubsubpublisher: plugins/pubsubpublisher/cmd
+      secretskeymanager: plugins/secretskeymanager/cmd
+# registry: <REGISTRY_URL>
+output: ./onix/deploy/onix-installer/adapter_artifacts/plugins
+zipFileName: plugins_bundle.zip
+# gsPath: gs://<BucketName>/plugins/
+goVersion: 1.24

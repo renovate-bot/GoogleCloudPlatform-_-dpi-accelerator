@@ -1,0 +1,17 @@
+log:
+  level: DEBUG
+timeouts:
+  read: 5s
+  write: 10s
+  idle: 120s
+  shutdown: 15s
+server:
+  host: 0.0.0.0
+  port: 8080
+db:
+  user: {{ database_user_sa_email }}
+  name: {{ registry_database_name }}
+  connectionName: {{ registry_db_connection_name }}
+event:
+  projectID: {{ project_id }}
+  topicID: {{ onix_topic_name }}

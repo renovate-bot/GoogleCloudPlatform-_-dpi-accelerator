@@ -1,0 +1,14 @@
+goVersion: "1.24"
+modules:
+  - name: github.com/example/project
+    repo: https://github.com/example/project.git
+    version: v1.0.0
+    path: .
+    plugins:
+      myplugin: cmd/myplugin
+  - name: app
+    path: ./local/app
+    images:
+      myimage:
+        dockerfile: Dockerfile
+        tag: v1

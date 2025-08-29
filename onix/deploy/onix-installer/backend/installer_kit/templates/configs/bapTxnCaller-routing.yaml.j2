@@ -1,0 +1,18 @@
+routingRules:
+  - domain: ONDC:TRV10
+    version: 2.0.0
+    targetType: bpp
+    target:
+      url: {{ adapter.gateway_url }}
+    endpoints:
+      - search
+  - domain: ONDC:TRV10
+    version: 2.0.0
+    targetType: bpp
+    endpoints:
+      - select
+      - init
+      - confirm
+      - status
+      - update
+      - cancel

@@ -1,0 +1,20 @@
+log:
+  level: INFO
+timeouts:
+  read: 5s
+  write: 10s
+  idle: 120s
+  shutdown: 15s
+server:
+  host: 0.0.0.0
+  port: 8080
+projectID: {{ project_id }}
+registry:
+  baseURL: {{ registry_url }}
+  timeout: 10s
+redisAddr: {{ redis_instance_ip }}:6379
+regID: {{ registry.subscriber_id }}
+regKeyID: {{ registry.key_id }}
+event:
+  projectID: {{ project_id }}
+  topicID: {{ onix_topic_name }}

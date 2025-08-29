@@ -1,0 +1,20 @@
+routingRules:
+  - domain: ONDC:TRV10
+    version: 2.0.0
+    {% if adapter.bpp_callback_url %}
+    targetType: url
+    target:
+      url: {{ adapter.bpp_callback_url }}
+    {% else %}
+    targetType: publisher
+    target:
+      publisherId: {{ adapter_topic_name }}
+    {% endif %}
+    endpoints:
+      - on_search
+      - on_select
+      - on_init
+      - on_confirm
+      - on_status
+      - on_update
+      - on_cancel

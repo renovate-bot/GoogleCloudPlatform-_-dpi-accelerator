@@ -1,0 +1,196 @@
+appName: "onix"
+log:
+  level: debug
+  destinations:
+    - type: stdout
+  contextKeys:
+    - transaction_id
+    - message_id
+    - subscriber_id
+    - module_id
+http:
+  port: 8080
+  timeout:
+    read: 30
+    write: 30
+    idle: 30
+pluginManager:
+  root: /app/plugins
+  remoteRoot: /mnt/gcs/plugins/plugins_bundle.zip
+modules:
+  {% if deploy_bap %}
+  - name: bapTxnReceiver
+    path: /bap/receiver/
+    handler:
+      type: std
+      role: bap
+      registryUrl: {{ registry_url }}
+      plugins:
+        {% if adapter.enable_schema_validation %}
+        schemaValidator:
+          id: schemavalidator
+          config:
+            schemaDir: /mnt/gcs/configs/schemas
+        {% endif %}
+        keyManager:
+          id: secretskeymanager
+          config:
+            projectID: {{ project_id }}
+        cache:
+          id: rediscache
+          config:
+            addr: {{ redis_instance_ip }}:6379
+        signValidator:
+          id: signvalidator
+        publisher:
+          id: pubsubpublisher
+          config:
+            project: {{ project_id }}
+            topics: {{ adapter_topic_name }}
+        router:
+          id: router
+          config:
+            routingConfig: /mnt/gcs/configs/bapTxnReceiver-routing.yaml
+        middleware:
+          - id: reqpreprocessor
+            config:
+              contextKeys: transaction_id,message_id
+              role: bap
+      steps:
+        - validateSign
+        - addRoute
+        {% if adapter.enable_schema_validation %}
+        - validateSchema
+        {% endif %}
+  - name: bapTxnCaller
+    path: /bap/caller/
+    handler:
+      type: std
+      registryUrl: {{ registry_url }}
+      role: bap
+      plugins:
+        {% if adapter.enable_schema_validation %}
+        schemaValidator:
+          id: schemavalidator
+          config:
+            schemaDir: /mnt/gcs/configs/schemas
+        {% endif %}
+        keyManager:
+          id: secretskeymanager
+          config:
+            projectID: {{ project_id }}
+        cache:
+          id: rediscache
+          config:
+            addr: {{ redis_instance_ip }}:6379
+        signer:
+          id: signer
+        publisher:
+          id: pubsubpublisher
+          config:
+            project: {{ project_id }}
+            topics: {{ adapter_topic_name }}
+        router:
+          id: router
+          config:
+            routingConfig: /mnt/gcs/configs/bapTxnCaller-routing.yaml
+        middleware:
+          - id: reqpreprocessor
+            config:
+              contextKeys: transaction_id,message_id
+              role: bap
+      steps:
+        - addRoute
+        - sign
+        {% if adapter.enable_schema_validation %}
+        - validateSchema
+        {% endif %}
+  {% endif %}
+  {% if deploy_bpp %}
+  - name: bppTxnReceiver
+    path: /bpp/receiver/
+    handler:
+      type: std
+      role: bpp
+      registryUrl: {{ registry_url }}
+      plugins:
+        {% if adapter.enable_schema_validation %}
+        schemaValidator:
+          id: schemavalidator
+          config:
+            schemaDir: /mnt/gcs/configs/schemas
+        {% endif %}
+        keyManager:
+          id: secretskeymanager
+          config:
+            projectID: {{ project_id }}
+        cache:
+          id: rediscache
+          config:
+            addr: {{ redis_instance_ip }}:6379
+        signValidator:
+          id: signvalidator
+        publisher:
+          id: pubsubpublisher
+          config:
+            project: {{ project_id }}
+            topics: {{ adapter_topic_name }}
+        router:
+          id: router
+          config:
+            routingConfig: /mnt/gcs/configs/bppTxnReceiver-routing.yaml
+        middleware:
+          - id: reqpreprocessor
+            config:
+              contextKeys: transaction_id,message_id
+              role: bpp
+      steps:
+        - validateSign
+        - addRoute
+        {% if adapter.enable_schema_validation %}
+        - validateSchema
+        {% endif %}
+  - name: bppTxnCaller
+    path: /bpp/caller/
+    handler:
+      type: std
+      role: bpp
+      registryUrl: {{ registry_url }}
+      plugins:
+        {% if adapter.enable_schema_validation %}
+        schemaValidator:
+          id: schemavalidator
+          config:
+            schemaDir: /mnt/gcs/configs/schemas
+        {% endif %}
+        keyManager:
+          id: secretskeymanager
+          config:
+            projectID: {{ project_id }}
+        cache:
+          id: rediscache
+          config:
+            addr: {{ redis_instance_ip }}:6379
+        signer:
+          id: signer
+        publisher:
+          id: pubsubpublisher
+          config:
+            project: {{ project_id }}
+            topics: {{ adapter_topic_name }}
+        router:
+          id: router
+          config:
+            routingConfig: /mnt/gcs/configs/bppTxnCaller-routing.yaml
+        middleware:
+          - id: reqpreprocessor
+            config:
+              contextKeys: transaction_id,message_id
+              role: bpp
+      steps:
+        - addRoute
+        - sign
+        {% if adapter.enable_schema_validation %}
+        - validateSchema
+        {% endif %}
+  {% endif %}
