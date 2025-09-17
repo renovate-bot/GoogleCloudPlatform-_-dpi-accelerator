@@ -56,7 +56,7 @@ func testRegistryClientConfig(baseURL string) *RegistryClientConfig {
 
 // TestNewRegistryClient tests the constructor for the registry client.
 func TestNewRegistryClient(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success with no connection pooling config", func(t *testing.T) {
 		cfg := &RegistryClientConfig{
 			BaseURL: "http://localhost:8080",
 			Timeout: 5 * time.Second,
@@ -73,6 +73,36 @@ func TestNewRegistryClient(t *testing.T) {
 		}
 		if client.client.Timeout != cfg.Timeout {
 			t.Errorf("client.client.Timeout = %v, want %v", client.client.Timeout, cfg.Timeout)
+		}
+	})
+
+	t.Run("success with connection pooling config", func(t *testing.T) {
+		cfg := &RegistryClientConfig{
+			BaseURL:             "http://localhost:8080",
+			Timeout:             5 * time.Second,
+			MaxIdleConns:        50,
+			MaxIdleConnsPerHost: 10,
+			MaxConnsPerHost:     20,
+			IdleConnTimeout:     90 * time.Second,
+		}
+		client, err := NewRegistryClient(cfg)
+		if err != nil {
+			t.Fatalf("NewRegistryClient() error = %v, wantErr false", err)
+		}
+		if client == nil {
+			t.Fatal("NewRegistryClient() returned nil client")
+		}
+
+		transport, ok := client.client.Transport.(*http.Transport)
+		if !ok {
+			t.Fatalf("client.client.Transport is not an *http.Transport")
+		}
+
+		if transport.MaxIdleConns != cfg.MaxIdleConns {
+			t.Errorf("transport.MaxIdleConns = %d, want %d", transport.MaxIdleConns, cfg.MaxIdleConns)
+		}
+		if transport.MaxIdleConnsPerHost != cfg.MaxIdleConnsPerHost {
+			t.Errorf("transport.MaxIdleConnsPerHost = %d, want %d", transport.MaxIdleConnsPerHost, cfg.MaxIdleConnsPerHost)
 		}
 	})
 

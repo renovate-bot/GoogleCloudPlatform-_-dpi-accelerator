@@ -38,10 +38,16 @@ type httpClient interface {
 
 // RetryConfig holds configuration for the retryable HTTP client.
 type RetryConfig struct {
-	RetryMax     int           // Maximum number of retries.
-	RetryWaitMin time.Duration // Minimum time to wait before retrying.
-	RetryWaitMax time.Duration // Maximum time to wait before retrying.
+	RetryMax            int           `yaml:"retryMax"`         // Maximum number of retries.
+	RetryWaitMin        time.Duration `yaml:"waitMin"`             // Minimum time to wait before retrying.
+	RetryWaitMax        time.Duration `yaml:"waitMax"`             // Maximum time to wait before retrying.
+	Timeout             time.Duration `yaml:"timeout"`             // Timeout for each HTTP request.
+	MaxIdleConns        int           `yaml:"maxIdleConns"`        // Maximum total idle connections.
+	MaxIdleConnsPerHost int           `yaml:"maxIdleConnsPerHost"` // Maximum idle connections per host.
+	MaxConnsPerHost     int           `yaml:"maxConnsPerHost"`     // Maximum connections per host.
+	IdleConnTimeout     time.Duration `yaml:"idleConnTimeout"`     // Timeout for idle connections.
 }
+
 
 // proxyTaskProcessor makes HTTP POST calls for asynchronous proxy tasks.
 type proxyTaskProcessor struct {
@@ -61,11 +67,37 @@ func NewProxyTaskProcessor(auth authGen, keyID string, retryCfg RetryConfig) (*p
 		return nil, errors.New("keyID cannot be empty")
 	}
 
+	// Configure a custom transport with connection pooling.
+	// Use the default values if no config given.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// If MaxIdleConnsPerHost is not set, it defaults to http.DefaultMaxIdleConnsPerHost (currently 2).
+	if retryCfg.MaxIdleConnsPerHost > 0 {
+		transport.MaxIdleConnsPerHost = retryCfg.MaxIdleConnsPerHost
+	}
+	// If MaxIdleConns is not set, it defaults to 100.
+	if retryCfg.MaxIdleConns > 0 {
+		transport.MaxIdleConns = retryCfg.MaxIdleConns
+	}
+	// If MaxConnsPerHost is not set, there is no limit.
+	if retryCfg.MaxConnsPerHost > 0 {
+		transport.MaxConnsPerHost = retryCfg.MaxConnsPerHost
+	}
+	// If IdleConnTimeout is not set, it defaults to 90 seconds.
+	if retryCfg.IdleConnTimeout > 0 {
+		transport.IdleConnTimeout = retryCfg.IdleConnTimeout
+	}
+
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = retryCfg.RetryMax
 	retryClient.RetryWaitMin = retryCfg.RetryWaitMin
 	retryClient.RetryWaitMax = retryCfg.RetryWaitMax
 	retryClient.Logger = nil
+
+	// Set the underlying http.Client to use our custom transport and timeout.
+	retryClient.HTTPClient = &http.Client{
+		Transport: transport,
+		Timeout:   retryCfg.Timeout,
+	}
 
 	return &proxyTaskProcessor{client: retryClient.StandardClient(), auth: auth, keyID: keyID}, nil
 }
@@ -118,6 +150,7 @@ func (p *proxyTaskProcessor) httpReq(ctx context.Context, task *model.AsyncTask)
 func (p *proxyTaskProcessor) proxy(ctx context.Context, req *http.Request) error {
 	targetURLStr := req.URL.String()
 	resp, err := p.client.Do(req)
+
 	if err != nil {
 		slog.ErrorContext(ctx, "ProxyTaskProcessor: HTTP request failed", "error", err, "target", targetURLStr)
 		return fmt.Errorf("HTTP request to %s failed: %w", targetURLStr, err)

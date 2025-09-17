@@ -114,12 +114,12 @@ func run(ctx context.Context) error {
 	if err := log.Setup(cfg.Log); err != nil {
 		return err
 	}
-	db, dbCleanUp, err := repository.InitConnection(cfg.DB)
+	db, dbCleanUp, err := newConnectionPool(ctx, cfg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to open database connection: %w", err)
 	}
 	defer dbCleanUp()
-	defer db.Close()
+
 	sv, svClose, err := signvalidator.New(ctx, &signvalidator.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create signature validator: %w", err)
@@ -168,6 +168,7 @@ func run(ctx context.Context) error {
 
 var configPath string
 var sqlOpen = sql.Open // Make sql.Open swappable for tests.
+var newConnectionPool = repository.NewConnectionPool
 
 func newServer(ctx context.Context, cfg *config, db *sql.DB, sv definition.SignValidator) (*http.Server, error) {
 	regRep, err := repository.NewRegistry(db)

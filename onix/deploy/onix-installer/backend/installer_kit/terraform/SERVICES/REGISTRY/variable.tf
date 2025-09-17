@@ -124,6 +124,16 @@ variable "registry_db_ipv4" {
   type        = bool
 }
 
+variable "registry_db_max_connections" {
+    type = number
+    description = "Max Connections Cloud SQL can have for Registry or Admin."
+}
+
+variable "registry_db_instance_cache" {
+    type = bool
+    description = "Whether data cache is to be enabled for registry db instance."
+}
+
 # Database Variable
 variable "registry_database_name" {
   description = "The name of the database within the Cloud SQL instance for Registry."

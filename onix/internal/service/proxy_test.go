@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/google/dpi-accelerator/beckn-onix/pkg/model"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 // mockHttpClient is a mock implementation of the httpClient interface.
@@ -63,7 +65,6 @@ func newMockHTTPResponse(statusCode int, body string) *http.Response {
 
 func TestNewProxyTaskProcessor(t *testing.T) {
 	mockAuth := &mockAuthGen{}
-	validRetryCfg := RetryConfig{RetryMax: 1, RetryWaitMin: 1 * time.Millisecond, RetryWaitMax: 1 * time.Millisecond}
 
 	tests := []struct {
 		name     string
@@ -71,27 +72,53 @@ func TestNewProxyTaskProcessor(t *testing.T) {
 		keyID    string
 		retryCfg RetryConfig
 		wantErr  string
+		check    func(*testing.T, *proxyTaskProcessor, RetryConfig)
 	}{
 		{
 			name:     "success",
 			auth:     mockAuth,
 			keyID:    "test-key-id",
-			retryCfg: validRetryCfg,
+			retryCfg: RetryConfig{RetryMax: 1, RetryWaitMin: 1 * time.Millisecond, RetryWaitMax: 1 * time.Millisecond},
 			wantErr:  "",
 		},
 		{
 			name:     "nil authGen",
 			auth:     nil,
 			keyID:    "test-key-id",
-			retryCfg: validRetryCfg,
+			retryCfg: RetryConfig{},
 			wantErr:  "authGen cannot be nil",
 		},
 		{
 			name:     "empty keyID",
 			auth:     mockAuth,
 			keyID:    "",
-			retryCfg: validRetryCfg,
+			retryCfg: RetryConfig{},
 			wantErr:  "keyID cannot be empty",
+		},
+		{
+			name:  "full client configuration",
+			auth:  mockAuth,
+			keyID: "test-key-id",
+			retryCfg: RetryConfig{
+				RetryMax:            5,
+				RetryWaitMin:        100 * time.Millisecond,
+				RetryWaitMax:        5 * time.Second,
+				Timeout:             15 * time.Second,
+				MaxIdleConns:        50,
+				MaxIdleConnsPerHost: 10,
+				MaxConnsPerHost:     20,
+				IdleConnTimeout:     2 * time.Minute,
+			},
+			wantErr: "",
+			check:   checkClientConfig,
+		},
+		{
+			name:     "zero client configuration uses defaults",
+			auth:     mockAuth,
+			keyID:    "test-key-id",
+			retryCfg: RetryConfig{},
+			wantErr:  "",
+			check:   checkClientConfig,
 		},
 	}
 
@@ -121,8 +148,41 @@ func TestNewProxyTaskProcessor(t *testing.T) {
 				if p.client == nil {
 					t.Errorf("NewProxyTaskProcessor() httpClient not initialized")
 				}
+				if tt.check != nil {
+					tt.check(t, p, tt.retryCfg)
+				}
 			}
 		})
+	}
+}
+
+func checkClientConfig(t *testing.T, p *proxyTaskProcessor, retryCfg RetryConfig) {
+	t.Helper()
+	// Type assert the interface back to a concrete client to inspect its fields.
+	client, ok := p.client.(*http.Client)
+	if !ok {
+		t.Fatalf("processor.client is not of type *http.Client, but %T", p.client)
+	}
+	rt, ok := client.Transport.(*retryablehttp.RoundTripper)
+	if !ok {
+		t.Fatalf("client transport is not a *retryablehttp.RoundTripper, but %T", client.Transport)
+	}
+	transport, ok := rt.Client.HTTPClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("underlying transport is not an *http.Transport, but %T", rt.Client.HTTPClient.Transport)
+	}
+
+	if retryCfg.MaxIdleConns > 0 && transport.MaxIdleConns != retryCfg.MaxIdleConns {
+		t.Errorf("Transport MaxIdleConns = %d, want %d", transport.MaxIdleConns, retryCfg.MaxIdleConns)
+	}
+	if retryCfg.MaxIdleConnsPerHost > 0 && transport.MaxIdleConnsPerHost != retryCfg.MaxIdleConnsPerHost {
+		t.Errorf("Transport MaxIdleConnsPerHost = %d, want %d", transport.MaxIdleConnsPerHost, retryCfg.MaxIdleConnsPerHost)
+	}
+	if retryCfg.MaxConnsPerHost > 0 && transport.MaxConnsPerHost != retryCfg.MaxConnsPerHost {
+		t.Errorf("Transport MaxConnsPerHost = %d, want %d", transport.MaxConnsPerHost, retryCfg.MaxConnsPerHost)
+	}
+	if retryCfg.IdleConnTimeout > 0 && transport.IdleConnTimeout != retryCfg.IdleConnTimeout {
+		t.Errorf("Transport IdleConnTimeout = %v, want %v", transport.IdleConnTimeout, retryCfg.IdleConnTimeout)
 	}
 }
 

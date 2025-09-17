@@ -26,6 +26,10 @@ resource "google_sql_database_instance" "instance" {
     settings {
         tier = var.db_instance_tier #  The machine type to use.
         edition = var.db_instance_edition # The edition of the instance, can be ENTERPRISE or ENTERPRISE_PLUS.
+        # Data cache only for ENTERPRISE_PLUS editions.
+        data_cache_config {
+          data_cache_enabled = var.db_instance_cache
+        }
         user_labels = var.db_instance_labels # Labels for your SQL Instance
         availability_type = var.db_aval_type # The availability type of the Cloud SQL instance, high availability (REGIONAL) or single zone (ZONAL).
         disk_size = var.db_instance_disk_size #  The size of data disk, in GB. Size of a running instance cannot be reduced but can be increased. The minimum value is 10GB.
@@ -43,7 +47,11 @@ resource "google_sql_database_instance" "instance" {
           name  = "cloudsql.iam_authentication"
           value = "on" # Enable IAM database authentication
         }
-    
+        database_flags {
+          name  = "max_connections"
+          value = var.db_instance_max_connections
+        }
+
     }    
 
 

@@ -28,6 +28,9 @@ registry:
   timeout: 10s
 redisAddr: <CACHE_IP>
 regID: <REGISTRY_ID>
+keyManagerCacheTTL:
+  privateKeysSeconds: <KEY_MANAGER_PRIVATE_KEY_CACHE_TTL_SECONDS>
+  publicKeysSeconds: <KEY_MANAGER_PUBLIC_KEY_CACHE_TTL_SECONDS>
 regKeyID: <REGISTRY_ENCRYPTION_KEY_ID>
 event:
   projectID: <PROJECT_ID>

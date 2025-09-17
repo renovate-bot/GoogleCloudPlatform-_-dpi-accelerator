@@ -26,6 +26,10 @@ db:
   user: <CLOUD_SQL_USER_SA>
   name: <DB NAME>
   connectionName: <PROJECT_ID:REGION:CLOUDSQL_INSTANCE> # Replace with your Cloud SQL instance connection name
+  maxOpenConns: <DB_MAX_OPEN_CONNS>
+  maxIdleConns: <DB_MAX_IDLE_CONNS>
+  connMaxIdleTime: <DB_CONN_MAX_IDLE_TIME>
+  connMaxLifetime: <DB_CONN_MAX_LIFETIME>
 event:
   projectID: <PROJECT_ID>
   topicID: <EVENTS_TOPIC_ID>

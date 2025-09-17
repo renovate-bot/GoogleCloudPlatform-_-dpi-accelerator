@@ -31,9 +31,3 @@ Helpful commands:
 
 5. Check GCS bucket configuration:
    kubectl describe pod -n {{ .Values.config.namespace | default "onix-adapter" }} -l app.kubernetes.io/instance={{ .Release.Name }} | grep -A 10 "Volumes:"
-
-For more information and documentation, visit:
-https://github.com/beckn/beckn-adapter-kit
-
-If you encounter any issues, please report them at:
-https://github.com/beckn/beckn-adapter-kit/issues

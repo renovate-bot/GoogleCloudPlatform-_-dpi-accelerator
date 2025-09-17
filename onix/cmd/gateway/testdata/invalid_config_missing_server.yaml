@@ -29,6 +29,6 @@ taskQueueWorkersCount: 5
 taskQueueBufferSize: 100
 subscriberID: "gateway.beckn.org"
 httpClientRetry:
-  maxAttempts: 3
+  retryMax: 3
   waitMin: 1s
   waitMax: 5s

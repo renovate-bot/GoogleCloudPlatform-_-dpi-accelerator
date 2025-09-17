@@ -34,8 +34,7 @@ import (
 	"github.com/google/dpi-accelerator/beckn-onix/internal/log"
 	"github.com/google/dpi-accelerator/beckn-onix/internal/service"
 	"github.com/google/dpi-accelerator/beckn-onix/plugins/rediscache"
-	"github.com/google/dpi-accelerator/beckn-onix/plugins/secretskeymanager"
-
+	keyManager "github.com/google/dpi-accelerator/beckn-onix/plugins/inmemorysecretkeymanager"
 	becknclient "github.com/beckn/beckn-onix/core/module/client"
 	decryption "github.com/beckn/beckn-onix/pkg/plugin/implementation/decrypter"
 	"github.com/beckn/beckn-onix/pkg/plugin/implementation/signer"
@@ -48,6 +47,7 @@ type config struct {
 	Timeouts  *timeoutConfig               `yaml:"timeouts"`
 	Server    *serverConfig                `yaml:"server"`
 	ProjectID string                       `yaml:"projectID"`
+	KeyManagerCacheTTL  *keyManager.CacheTTL   `yaml:"keyManagerCacheTTL"`
 	Registry  *client.RegistryClientConfig `yaml:"registry"`
 	RedisAddr string                       `yaml:"redisAddr"`
 	RegID     string                       `yaml:"regID"`    // Registry's ID
@@ -123,6 +123,12 @@ func (c *config) valid() error {
 	if c.Event == nil {
 		return fmt.Errorf("missing required config section: event")
 	}
+	if c.KeyManagerCacheTTL == nil {
+		slog.Warn("Config validation: cacheTTL section missing, using default retry values.")
+		// Provide default values or handle as an error if strict config is required
+		c.KeyManagerCacheTTL = &keyManager.CacheTTL{PrivateKeysSeconds: 5, PublicKeysSeconds: 3600}
+	}
+
 	return nil
 }
 
@@ -143,7 +149,15 @@ func run(ctx context.Context) error {
 	defer closeRedis()
 
 	becknRegClient := becknclient.NewRegisteryClient(&becknclient.Config{RegisteryURL: cfg.Registry.BaseURL})
-	km, closeKM, err := secretskeymanager.New(ctx, redis, becknRegClient, &secretskeymanager.Config{ProjectID: cfg.ProjectID})
+    keyManagerConfig := &keyManager.Config{
+    ProjectID: cfg.ProjectID,
+    CacheTTL: keyManager.CacheTTL{
+        PrivateKeysSeconds: cfg.KeyManagerCacheTTL.PrivateKeysSeconds,
+        PublicKeysSeconds:  cfg.KeyManagerCacheTTL.PublicKeysSeconds,
+    },
+    }
+
+   km, closeKM, err := keyManager.New(ctx, redis, becknRegClient, keyManagerConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create secrets key manager: %w", err)
 	}

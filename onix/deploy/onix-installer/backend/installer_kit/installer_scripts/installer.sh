@@ -119,6 +119,34 @@ cleanup() {
     echo "Shutdown complete."
 }
 
+# Function to wait for a service to become available on a specific port
+wait_for_port() {
+    local host="localhost"
+    local port="$1"
+    local timeout=60  # seconds
+    local counter=0
+    local service=""
+    if [ "$port" == "4200" ]; then
+        service="frontend"
+    elif [ "$port" == "8000" ]; then
+        service="backend"
+    fi
+
+    echo "⏳ Waiting for $service service on $host:$port..."
+
+    while ! nc -z "$host" "$port" > /dev/null 2>&1; do
+        if [ $counter -ge $timeout ]; then
+            echo "❌ Timeout: $service service on port $port did not start within $timeout seconds."
+            echo "Please check the $service logs at $LOG_DIR/$service.log for more details."
+            exit 1
+        fi
+        sleep 1
+        counter=$((counter+1))
+    done
+
+    echo "✅ $service service on port $port is now running."
+}
+
 # Trap EXIT signal to run the cleanup function
 trap cleanup EXIT
 
@@ -185,20 +213,30 @@ echo "✅ Initial setup complete."
 # Create a logs directory
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
+LOG_DIR="$(cd "$LOG_DIR" && pwd)"
 echo "📝 Logs will be stored in the $LOG_DIR directory."
 
-LOG_DIR="$(cd "$LOG_DIR" && pwd)"
 
+# Run frontend setup
 if [ -d "$FRONTEND_DIR" ]; then
-    echo "🔵 Installing frontend dependencies and starting server..."
-    (cd "$FRONTEND_DIR" && npm install > "$LOG_DIR/frontend-install.log" 2>&1 && ng serve > "$LOG_DIR/frontend.log" 2>&1 &)
-    echo "✅ Frontend server started. View logs at $LOG_DIR/frontend.log"
+    echo "🔵 Installing frontend dependencies..."
+    if ! (cd "$FRONTEND_DIR" && npm install > "$LOG_DIR/frontend-install.log" 2>&1); then
+        echo "❌ Error: Frontend dependency installation failed. Please check the logs at $LOG_DIR/frontend-install.log for details."
+        exit 1
+    fi
+    echo "✅ Frontend dependencies installed successfully."
+
+    echo "🔵 Starting frontend server..."
+    echo "View logs at $LOG_DIR/frontend.log"
+    (cd "$FRONTEND_DIR" && ng serve > "$LOG_DIR/frontend.log" 2>&1 &)
 else
-    echo "⚠️  Warning: Frontend directory not found at $FRONTEND_DIR. Skipping."
+    echo "Error: Frontend directory not found at $FRONTEND_DIR."
+    exit 1
 fi
 
+# Run backend setup
 if [ -d "$BACKEND_DIR" ] && [ -f "$BACKEND_DIR/main.py" ]; then
-       echo "🚀 Setting up backend virtual environment and starting server..."
+    echo "🚀 Setting up backend virtual environment and starting server..."
     (
         cd "$BACKEND_DIR" || exit 1 # Change to backend directory, exit if fails
 
@@ -211,41 +249,46 @@ if [ -d "$BACKEND_DIR" ] && [ -f "$BACKEND_DIR/main.py" ]; then
         source venv/bin/activate
 
         # Install backend dependencies
-        echo "Installing backend dependencies from requirements.txt..."
-        pip3 install -r requirements.txt --require-hashes > "$LOG_DIR/backend-install.log" 2>&1
+        echo "🔵 Installing backend dependencies from requirements.txt..."
+        if ! pip3 install -r requirements.txt --require-hashes > "$LOG_DIR/backend-install.log" 2>&1; then
+            echo "❌ Error: Backend dependency installation failed. Please check the logs at $LOG_DIR/backend-install.log for details."
+            exit 1
+        fi
+        echo "✅ Backend dependencies installed successfully."
 
-        # Start backend server
-        echo "Starting backend server..."
+        echo "🔵 Starting backend server..."
+        echo "View logs at $LOG_DIR/backend.log"
         uvicorn main:app --reload > "$LOG_DIR/backend.log" 2>&1 &
 
         # Store the PID of uvicorn for potential future use in cleanup if needed
         # (though pkill -f is generally sufficient)
         echo "$!" > "$LOG_DIR/backend_uvicorn.pid"
-
-        echo "✅ Backend server started. (Typically at http://localhost:8000). View logs at $LOG_DIR/backend.log"
-    ) & # Run the entire backend setup in a subshell in the background
-   else
-    echo "⚠️  Could not start backend. Directory or main.py not found in $BACKEND_DIR."
+    )
+else
+    echo "Error: Could not start backend. Directory or main.py not found in $BACKEND_DIR."
+    exit 1
 fi
+
+# Wait for both services to be available
+wait_for_port 4200
+wait_for_port 8000
 
 # --- Open Installer UI in Browser ---
 echo
 echo "--- Step 4: Opening Installer UI ---"
-echo "Giving the servers a moment to start..."
-sleep 8
 
 URL="http://localhost:4200"
 
 # Check OS and open browser
 if [[ "$(uname)" == "Darwin" ]]; then
-  open "$URL"
+    open "$URL"
 elif [[ "$(uname)" == "Linux" ]]; then
-  xdg-open "$URL"
+    xdg-open "$URL"
 elif [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
-  cmd.exe /c start "$URL"
+    cmd.exe /c start "$URL"
 else
-  echo "Could not detect OS to automatically open browser."
-  echo "Please open the installer UI manually at $URL"
+    echo "Could not detect OS to automatically open browser."
+    echo "Please open the installer UI manually at $URL"
 fi
 echo "------------------------------------"
 echo

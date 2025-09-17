@@ -135,12 +135,11 @@ func run(ctx context.Context) error {
 	if err := log.Setup(cfg.Log); err != nil {
 		return err
 	}
-	db, dbCleanUp, err := repository.InitConnection(cfg.DB)
+	db, dbCleanUp, err := newConnectionPool(ctx, cfg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to open database connection: %w", err)
 	}
 	defer dbCleanUp()
-	defer db.Close()
 	encry, _, err := encrypter.New(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create signature validator: %w", err)
@@ -190,6 +189,7 @@ func run(ctx context.Context) error {
 }
 
 var configPath string
+var newConnectionPool = repository.NewConnectionPool
 
 func newServer(ctx context.Context, cfg *config, db *sql.DB, encyr definition.Encrypter, sm *secretmanager.Client) (*http.Server, error) {
 

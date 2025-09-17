@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/dpi-accelerator/beckn-onix/internal/client"
 	"github.com/google/dpi-accelerator/beckn-onix/internal/log"
+	"github.com/google/dpi-accelerator/beckn-onix/internal/service"
 )
 
 func TestConfig_Valid_Success(t *testing.T) {
@@ -35,7 +36,7 @@ func TestConfig_Valid_Success(t *testing.T) {
 		TaskQueueWorkersCount: 5,
 		TaskQueueBufferSize: 100,
 		SubscriberID:    "test-subscriber-id",
-		HTTPClientRetry: &HTTPClientRetryConfig{MaxAttempts: 3, WaitMin: 1 * time.Second, WaitMax: 5 * time.Second},
+		HTTPClientRetry: &service.RetryConfig{RetryMax: 3, RetryWaitMin: 1 * time.Second, RetryWaitMax: 5 * time.Second},
 	}
 
 	if err := cfg.valid(); err != nil {
@@ -72,7 +73,7 @@ func TestInitConfig_Success(t *testing.T) {
 	if cfg.Registry.BaseURL != "http://localhost:8080" {
 		t.Errorf("cfg.Registry.BaseURL = %q, want %q", cfg.Registry.BaseURL, "http://localhost:8080")
 	}
-	if cfg.HTTPClientRetry == nil || cfg.HTTPClientRetry.MaxAttempts != 3 {
+	if cfg.HTTPClientRetry == nil || cfg.HTTPClientRetry.RetryMax != 3 {
 		t.Errorf("cfg.HTTPClientRetry not loaded correctly, got %+v", cfg.HTTPClientRetry)
 	}
 }
@@ -119,7 +120,7 @@ func TestConfig_Valid_Error(t *testing.T) {
 	validTimeoutsCfg := &timeoutConfig{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second, Shutdown: 1 * time.Second}
 	validServerCfg := &serverConfig{Host: "localhost", Port: 8080}
 	validRegistryCfg := &client.RegistryClientConfig{BaseURL: "http://registry.com"}
-	validRetryCfg := &HTTPClientRetryConfig{MaxAttempts: 3, WaitMin: 1 * time.Second, WaitMax: 5 * time.Second}
+	validRetryCfg := &service.RetryConfig{RetryMax: 3, RetryWaitMin: 1 * time.Second, RetryWaitMax: 5 * time.Second}
 
 	tests := []struct {
 		name          string
@@ -316,7 +317,7 @@ func TestConfig_Valid_Error(t *testing.T) {
 					if tt.cfg.HTTPClientRetry == nil {
 						t.Errorf("HTTPClientRetry should have been initialized with defaults, but is nil")
 					}
-					if tt.cfg.HTTPClientRetry.MaxAttempts != 1 || tt.cfg.HTTPClientRetry.WaitMin != 1*time.Second || tt.cfg.HTTPClientRetry.WaitMax != 30*time.Second {
+					if tt.cfg.HTTPClientRetry.RetryMax != 1 || tt.cfg.HTTPClientRetry.RetryWaitMin != 1*time.Second || tt.cfg.HTTPClientRetry.RetryWaitMax != 30*time.Second {
 						t.Errorf("HTTPClientRetry defaults not set correctly, got %+v", tt.cfg.HTTPClientRetry)
 					}
 				}

@@ -25,9 +25,25 @@ server:
 projectID: <PROJECT_ID>
 registry:
   baseURL: <REGISTRY_URL>
-  timeout: 10s
+  timeout: <REGISTRY_CLIENT_TIMEOUT>
+  maxIdleConns: <REGISTRY_CLIENT_MAX_IDLE_CONNS>
+  maxIdleConnsPerHost: <REGISTRY_CLIENT_MAX_IDLE_CONNS_PER_HOST>
+  maxConnsPerHost: <REGISTRY_CLIENT_MAX_CONNS_PER_HOST> # 0 means no limit
+  idleConnTimeout: <REGISTRY_CLIENT_IDLE_CONN_TIMEOUT>
 redisAddr: <CACHE_IP>
+keyManagerCacheTTL:
+  privateKeysSeconds: <KEY_MANAGER_PRIVATE_KEY_CACHE_TTL_SECONDS>
+  publicKeysSeconds: <KEY_MANAGER_PUBLIC_KEY_CACHE_TTL_SECONDS>
 maxConcurrentFanoutTasks: <MAX_CONCURRENT_FANOUT_TASKS>
 taskQueueWorkersCount: <NUM_OF_CHANNEL_TASK_QUEUE_WORKERS>
 taskQueueBufferSize: <BUFFER_SIZE_OF_CHANNEL_TASK_QUEUE>
 subscriberID: <GATEWAY_SUBSCRIBER_ID>
+httpClientRetry:
+  retryMax: <HTTP_CLIENT_RETRY_MAX>
+  waitMin: <HTTP_CLIENT_RETRY_WAIT_MIN>
+  waitMax: <HTTP_CLIENT_RETRY_WAIT_MAX>
+  timeout: <HTTP_CLIENT_TIMEOUT>
+  maxIdleConns: <HTTP_CLIENT_MAX_IDLE_CONNS>
+  maxIdleConnsPerHost: <HTTP_CLIENT_MAX_IDLE_CONNS_PER_HOST>
+  maxConnsPerHost: <HTTP_CLIENT_MAX_CONNS_PER_HOST> # 0 means no limit
+  idleConnTimeout: <HTTP_CLIENT_IDLE_CONN_TIMEOUT>

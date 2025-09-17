@@ -16,8 +16,31 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Additional configuration to be set dynamically by script
+config:
+  namespace: ""
+  ksa: ""
+  bucketName: ""
+
+# --- HPA Configuration ---
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+
+# --- Resource Configuration ---
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "500m"
+    memory: "1024Mi"
+
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
-replicaCount: 1
+replicaCount: 2
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -79,8 +102,6 @@ ingress:
               port: 80
   tls: []
 
-resources: {}
-
 livenessProbe:
   httpGet:
     path: /
@@ -89,12 +110,6 @@ readinessProbe:
   httpGet:
     path: /
     port: http
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
 
 # Adding GCS Fuse volume for bucket mounting
 volumes:
@@ -115,10 +130,3 @@ volumeMounts:
 nodeSelector: {}
 tolerations: []
 affinity: {}
-
-# Additional configuration to be set dynamically by Terraform
-config:
-  namespace: ""  # Namespace from Terraform
-  ksa: ""  # Kubernetes Service Account from Terraform
-  bucketName: ""  # GCS Bucket Name from Terraform
-

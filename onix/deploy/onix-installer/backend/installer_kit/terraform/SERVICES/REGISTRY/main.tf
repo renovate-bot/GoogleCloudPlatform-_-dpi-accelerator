@@ -25,6 +25,8 @@ module "registry_database_instance" {
   db_instance_disk_size = var.registry_db_instance_disk_size
   db_instance_disk_type = var.registry_db_instance_disk_type
   db_ipv4            = var.registry_db_ipv4
+  db_instance_max_connections = var.registry_db_max_connections
+  db_instance_cache = var.registry_db_instance_cache
   instance_network   = "projects/${var.project_id}/global/networks/${var.network_name}"
   depends_on = [
     module.registry_gsa

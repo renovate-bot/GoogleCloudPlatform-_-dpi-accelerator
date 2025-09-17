@@ -61,15 +61,22 @@ variable "db_instance_disk_type" {
     description = "Type of disk"
 }
 
-
-
 variable "db_ipv4" {
     type = bool
     description = "Whether public IPv4 should be enabled or not"
 }
 
-
 variable "instance_network" {
     type = string
     description = "Private Network for the instance"
+}
+
+variable "db_instance_max_connections" {
+    type = number
+    description = "Max Connections db instance can have"
+}
+
+variable "db_instance_cache" {
+    type = bool
+    description = "Whether data cache is enabled for the instance"
 }

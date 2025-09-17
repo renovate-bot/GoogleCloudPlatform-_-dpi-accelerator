@@ -35,8 +35,12 @@ const (
 
 // RegistryClientConfig holds configuration for the retryable HTTP client for the Registry.
 type RegistryClientConfig struct {
-	Timeout time.Duration `yaml:"timeout"` // Timeout for each individual HTTP request attempt.
-	BaseURL string        `yaml:"baseURL"` // Base URL of the registry service (e.g., "http://localhost:8080")
+	Timeout             time.Duration `yaml:"timeout"` // Timeout for each individual HTTP request attempt.
+	BaseURL             string        `yaml:"baseURL"` // Base URL of the registry service (e.g., "http://localhost:8080")
+	MaxIdleConns        int           `yaml:"maxIdleConns"`
+	MaxIdleConnsPerHost int           `yaml:"maxIdleConnsPerHost"`
+	MaxConnsPerHost     int           `yaml:"maxConnsPerHost"`
+	IdleConnTimeout     time.Duration `yaml:"idleConnTimeout"`
 }
 
 type httpRegistryClient struct {
@@ -55,8 +59,29 @@ func NewRegistryClient(cfg *RegistryClientConfig) (*httpRegistryClient, error) {
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 10 * time.Second // Provide a default timeout if not configured
 	}
+
+	// Configure a custom transport with connection pooling.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// If MaxIdleConnsPerHost is not set, it defaults to http.DefaultMaxIdleConnsPerHost (currently 2).
+	if cfg.MaxIdleConnsPerHost > 0 {
+		transport.MaxIdleConnsPerHost = cfg.MaxIdleConnsPerHost
+	}
+	// If MaxIdleConns is not set, it defaults to 100.
+	if cfg.MaxIdleConns > 0 {
+		transport.MaxIdleConns = cfg.MaxIdleConns
+	}
+	// If MaxConnsPerHost is not set, there is no limit.
+	if cfg.MaxConnsPerHost > 0 {
+		transport.MaxConnsPerHost = cfg.MaxConnsPerHost
+	}
+	// If IdleConnTimeout is not set, it defaults to 90 seconds.
+	if cfg.IdleConnTimeout > 0 {
+		transport.IdleConnTimeout = cfg.IdleConnTimeout
+	}
+
 	client := &http.Client{
 		Timeout: cfg.Timeout,
+		Transport: transport,
 	}
 	return &httpRegistryClient{
 		client:  client,

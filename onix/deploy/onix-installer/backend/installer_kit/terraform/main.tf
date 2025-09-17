@@ -474,8 +474,10 @@ module "registry_service" {
   registry_db_instance_disk_size = var.registry_db_instance_disk_size
   registry_db_instance_disk_type = var.registry_db_instance_disk_type
   registry_db_ipv4 = var.registry_db_ipv4
+  registry_db_max_connections = var.registry_db_max_connections
+  registry_db_instance_cache = var.registry_db_instance_cache
   registry_database_name = var.registry_database_name
-
+  
   # GSA and KSA related variables
   registry_gsa_account_id = var.registry_gsa_account_id
   registry_gsa_display_name = var.registry_gsa_display_name

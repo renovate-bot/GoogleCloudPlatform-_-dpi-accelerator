@@ -34,6 +34,8 @@ import (
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/google/go-cmp/cmp"
 	"github.com/lib/pq"
+
+	"cloud.google.com/go/cloudsqlconn"
 )
 
 // newMockRegistry is a helper function to set up a new registry with a mocked DB.
@@ -119,6 +121,124 @@ func TestValidateLRO_Failure(t *testing.T) {
 			// Ensure that for failure cases, the error is not nil
 			if tt.wantErr != nil && err == nil {
 				t.Errorf("validateLRO() error is nil, wantErr %v", tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestNewConnectionPool(t *testing.T) {
+	// Mock the driver registration to avoid global state changes.
+	originalRegisterer := pgxv5Registerer
+	defer func() { pgxv5Registerer = originalRegisterer }()
+
+	ctx := context.Background()
+	validConfig := &Config{
+		ConnectionName: "proj:region:inst",
+		User:           "test-user",
+		Name:           "test-db",
+	}
+
+	tests := []struct {
+		name          string
+		config        *Config
+		setupMocks    func(mock sqlmock.Sqlmock)
+		pgxv5RegErr   error
+		wantErrMsg    string
+		wantCleanup   bool
+		checkDBConfig func(t *testing.T, db *sql.DB, cfg *Config)
+	}{
+		{
+			name:   "success",
+			config: validConfig,
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
+			wantCleanup: true,
+		},
+		{
+			name: "success with all pool settings",
+			config: &Config{
+				ConnectionName:  "proj:region:inst",
+				User:            "test-user",
+				Name:            "test-db",
+				MaxOpenConns:    10,
+				MaxIdleConns:    5,
+				ConnMaxIdleTime: 1 * time.Minute,
+				ConnMaxLifetime: 5 * time.Minute,
+			},
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
+			wantCleanup: true,
+		},
+		{
+			name:       "error on missing ConnectionName",
+			config:     &Config{User: "user", Name: "db"},
+			wantErrMsg: "db.connectionName is required in config",
+		},
+		{
+			name:       "error on missing User",
+			config:     &Config{ConnectionName: "conn", Name: "db"},
+			wantErrMsg: "db.user is required in config",
+		},
+		{
+			name:       "error on missing Name",
+			config:     &Config{ConnectionName: "conn", User: "user"},
+			wantErrMsg: "db.name is required in config",
+		},
+		{
+			name:        "error on driver registration",
+			config:      validConfig,
+			pgxv5RegErr: errors.New("driver registration failed"),
+			wantErrMsg:  "pgxv5.RegisterDriver: driver registration failed",
+		},
+		{
+			name:   "error on ping",
+			config: validConfig,
+			setupMocks: func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing().WillReturnError(errors.New("ping failed"))
+			},
+			wantErrMsg: "db.Ping failed: ping failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pgxv5Registerer = func(name string, opts ...cloudsqlconn.Option) (func() error, error) {
+				return func() error { return nil }, tt.pgxv5RegErr
+			}
+
+			db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+			if err != nil {
+				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+			}
+			defer db.Close()
+			sqlOpen = func(driverName, dataSourceName string) (*sql.DB, error) { return db, nil }
+			defer func() { sqlOpen = sql.Open }()
+
+			if tt.setupMocks != nil {
+				tt.setupMocks(mock)
+			}
+
+			_, cleanup, err := NewConnectionPool(ctx, tt.config)
+			if tt.wantErrMsg != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("NewConnectionPool() error = %v, want error containing %q", err, tt.wantErrMsg)
+				}
+			} else if err != nil {
+				t.Errorf("NewConnectionPool() unexpected error = %v", err)
+			}
+
+			if tt.wantCleanup {
+				if cleanup == nil {
+					t.Error("NewConnectionPool() cleanup function is nil, want non-nil")
+				}
+			} else if cleanup != nil {
+				t.Error("NewConnectionPool() cleanup function is not nil, want nil")
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
 		})
 	}

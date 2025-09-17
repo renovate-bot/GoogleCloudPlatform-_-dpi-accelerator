@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
@@ -53,9 +54,13 @@ const subscriptionsTableName = "subscriptions"
 
 // registry implements the lookUpRepository interface using PostgreSQL.
 type Config struct {
-	User           string `yaml:"user"`
-	Name           string `yaml:"name"`
-	ConnectionName string `yaml:"connectionName"`
+	User             string        `yaml:"user"`
+	Name             string        `yaml:"name"`             // Database name.
+	ConnectionName   string        `yaml:"connectionName"`   // Cloud SQL connection name.
+	MaxOpenConns     int           `yaml:"maxOpenConns"`     // Maximum number of open connections to the database.
+	MaxIdleConns     int           `yaml:"maxIdleConns"`     // Maximum number of connections in the idle connection pool.
+	ConnMaxIdleTime  time.Duration `yaml:"connMaxIdleTime"`  // Maximum amount of time a connection may be idle.
+	ConnMaxLifetime  time.Duration `yaml:"connMaxLifetime"`  // Maximum amount of time a connection may be reused.
 }
 
 type registry struct {
@@ -210,8 +215,22 @@ func buildLocationConditions(locationFilter *model.Location) []goqu.Expression {
 	return conditions
 }
 
-func InitConnection(cfg *Config) (*sql.DB, func() error, error) {
-	cleanup, err := pgxv5.RegisterDriver("cloudsql-iam-postgres", cloudsqlconn.WithIAMAuthN())
+var pgxv5Registerer = pgxv5.RegisterDriver
+var sqlOpen = sql.Open
+
+// NewConnectionPool creates a new database connection pool.
+func NewConnectionPool(ctx context.Context, cfg *Config) (*sql.DB, func() error, error) {
+	if cfg.ConnectionName == "" {
+		return nil, nil, fmt.Errorf("db.connectionName is required in config")
+	}
+	if cfg.User == "" {
+		return nil, nil, fmt.Errorf("db.user is required in config")
+	}
+	if cfg.Name == "" {
+		return nil, nil, fmt.Errorf("db.name is required in config")
+	}
+
+	cleanup, err := pgxv5Registerer("cloudsql-iam-postgres", cloudsqlconn.WithIAMAuthN())
 	if err != nil {
 		return nil, nil, fmt.Errorf("pgxv5.RegisterDriver: %w", err)
 	}
@@ -222,12 +241,42 @@ func InitConnection(cfg *Config) (*sql.DB, func() error, error) {
 		cfg.Name,
 	)
 
-	db, err := sql.Open("cloudsql-iam-postgres", dsn)
+	db, err := sqlOpen("cloudsql-iam-postgres", dsn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("sql.Open: %w", err)
 	}
 
-	return db, cleanup, nil
+	// Configure the Connection Pool.
+	// A value of 0 or less for any of these settings means default behavior.
+	if cfg.MaxOpenConns > 0 {
+		db.SetMaxOpenConns(cfg.MaxOpenConns)
+	}
+	// Default is 2.
+	if cfg.MaxIdleConns > 0 {
+		db.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
+	// Default is 0 (to not close idle connections).
+	if cfg.ConnMaxIdleTime > 0 {
+		db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	}
+	// Default is 0 (that connections are not closed due to their age).
+	if cfg.ConnMaxLifetime > 0 {
+		db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	}
+
+	// Ping the database to ensure a connection can be made.
+	if err = db.Ping(); err != nil {
+		cleanup()
+		db.Close()
+		return nil, nil, fmt.Errorf("db.Ping failed: %w", err)
+	}
+
+	fullCleanup := func() error {
+		db.Close()
+		return cleanup()
+	}
+
+	return db, fullCleanup, nil
 }
 
 const insertOperationQuery = `

@@ -32,8 +32,8 @@ import (
 	"github.com/google/dpi-accelerator/beckn-onix/internal/client"
 	"github.com/google/dpi-accelerator/beckn-onix/internal/log"
 	"github.com/google/dpi-accelerator/beckn-onix/internal/service"
+	keyManager "github.com/google/dpi-accelerator/beckn-onix/plugins/inmemorysecretkeymanager"
 	"github.com/google/dpi-accelerator/beckn-onix/plugins/rediscache"
-	"github.com/google/dpi-accelerator/beckn-onix/plugins/secretskeymanager"
 
 	beckn "github.com/beckn/beckn-onix/core/module/client"
 	"github.com/beckn/beckn-onix/pkg/plugin/implementation/signer"
@@ -47,21 +47,16 @@ type config struct {
 	Timeouts                  *timeoutConfig               `yaml:"timeouts"`
 	Server                    *serverConfig                `yaml:"server"`
 	ProjectID                 string                       `yaml:"projectID"`
+	KeyManagerCacheTTL        *keyManager.CacheTTL         `yaml:"keyManagerCacheTTL"`
 	Registry                  *client.RegistryClientConfig `yaml:"registry"`
 	RedisAddr                 string                       `yaml:"redisAddr"`
 	MaxConcurrentFanoutTasks  int                          `yaml:"maxConcurrentFanoutTasks"`
 	TaskQueueWorkersCount     int                          `yaml:"taskQueueWorkersCount"`
 	TaskQueueBufferSize       int                          `yaml:"taskQueueBufferSize"`
 	SubscriberID              string                       `yaml:"subscriberID"`
-	HTTPClientRetry           *HTTPClientRetryConfig       `yaml:"httpClientRetry"`
+	HTTPClientRetry           *service.RetryConfig         `yaml:"httpClientRetry"`
 }
 
-// HTTPClientRetryConfig holds configuration for retryable HTTP clients.
-type HTTPClientRetryConfig struct {
-	MaxAttempts int           `yaml:"maxAttempts"`
-	WaitMin     time.Duration `yaml:"waitMin"`
-	WaitMax     time.Duration `yaml:"waitMax"`
-}
 type serverConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
@@ -125,9 +120,14 @@ func (c *config) valid() error {
 		return fmt.Errorf("missing subscriber ID")
 	}
 	if c.HTTPClientRetry == nil {
-		slog.Warn("Config validation: httpClientRetry section missing, using default retry values")
+		slog.Warn("Config validation: httpClientRetry section missing, using default retry values.")
 		// Provide default values or handle as an error if strict config is required
-		c.HTTPClientRetry = &HTTPClientRetryConfig{MaxAttempts: 1, WaitMin: 1 * time.Second, WaitMax: 30 * time.Second}
+		c.HTTPClientRetry = &service.RetryConfig{RetryMax: 1, RetryWaitMin: 1 * time.Second, RetryWaitMax: 30 * time.Second}
+	}
+    if c.KeyManagerCacheTTL == nil {
+		slog.Warn("Config validation: keyManagerCacheTTL section missing, using default retry values.")
+		// Provide default values or handle as an error if strict config is required
+		c.KeyManagerCacheTTL = &keyManager.CacheTTL{PrivateKeysSeconds: 5, PublicKeysSeconds: 3600}
 	}
 
 	return nil
@@ -158,7 +158,16 @@ func run(ctx context.Context) error {
 	}
 	defer closeRedis()
 	rClient := beckn.NewRegisteryClient(&beckn.Config{RegisteryURL: cfg.Registry.BaseURL})
-	km, closeKM, err := secretskeymanager.New(ctx, redis, rClient, &secretskeymanager.Config{ProjectID: cfg.ProjectID})
+
+	keyManagerConfig := &keyManager.Config{
+    ProjectID: cfg.ProjectID,
+    CacheTTL: keyManager.CacheTTL{
+        PrivateKeysSeconds: cfg.KeyManagerCacheTTL.PrivateKeysSeconds,
+        PublicKeysSeconds:  cfg.KeyManagerCacheTTL.PublicKeysSeconds,
+    },
+    }
+
+   km, closeKM, err := keyManager.New(ctx, redis, rClient, keyManagerConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create secrets key manager: %w", err)
 	}
@@ -180,13 +189,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to create auth gen service: %w", err)
 	}
 
-	proxyRetryCfg := service.RetryConfig{
-		RetryMax:     cfg.HTTPClientRetry.MaxAttempts,
-		RetryWaitMin: cfg.HTTPClientRetry.WaitMin,
-		RetryWaitMax: cfg.HTTPClientRetry.WaitMax,
-	}
-
-	pTaskProcessor, err := service.NewProxyTaskProcessor(authGen, cfg.SubscriberID, proxyRetryCfg)
+	pTaskProcessor, err := service.NewProxyTaskProcessor(authGen, cfg.SubscriberID, *cfg.HTTPClientRetry)
 	if err != nil {
 		return fmt.Errorf("failed to create proxy task processor: %w", err)
 	}

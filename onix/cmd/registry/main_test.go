@@ -466,22 +466,21 @@ func TestRun_NewServerFails_Error(t *testing.T) {
 
 	ctx := context.Background()
 	configRelPath := "config_valid_for_newserver_fail.yaml"
-	expectedError := "failed to create event publisher" // Adjusted to match actual error from NewRegistry
+	expectedError := "failed to open database connection: db connection error"
 
 	testConfigFilePath := filepath.Join(testdataDir, configRelPath)
 	cleanup := setTestConfigPath(t, testConfigFilePath)
 	defer cleanup()
 
-	_, _, cleanup = setUpTestPubsub(context.Background(), t, "test-topic")
-	defer cleanup()
-	// Mock sql.Open to return a nil DB and nil error.
-	oldSQLOpen := sqlOpen
-	sqlOpen = func(driverName, dataSourceName string) (*sql.DB, error) {
-		return nil, nil // Return nil DB, nil error
+	// Mock NewConnectionPool to simulate a DB connection failure.
+	originalNewConnectionPool := newConnectionPool
+	newConnectionPool = func(ctx context.Context, cfg *repository.Config) (*sql.DB, func() error, error) {
+		return nil, func() error { return nil }, fmt.Errorf("db connection error")
 	}
-	defer func() { sqlOpen = oldSQLOpen }()
+	defer func() { newConnectionPool = originalNewConnectionPool }()
 
 	err := run(ctx)
+
 	if err == nil {
 		t.Fatalf("run() with config %s, err = nil, wantErr containing %q", configRelPath, expectedError)
 	}

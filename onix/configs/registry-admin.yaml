@@ -26,6 +26,10 @@ db:
   user: <CLOUD_SQL_USER_SA>
   name: <DB NAME>
   connectionName: <PROJECT_ID:REGION:CLOUDSQL_INSTANCE> # Replace with your Cloud SQL instance connection name
+  maxOpenConns: <DB_MAX_OPEN_CONNS>
+  maxIdleConns: <DB_MAX_IDLE_CONNS>
+  connMaxIdleTime: <DB_CONN_MAX_IDLE_TIME>
+  connMaxLifetime: <DB_CONN_MAX_LIFETIME>
 npClient:
   timeout: 10s
 admin:
@@ -33,8 +37,8 @@ admin:
 event:
   projectID: <PROJECT_ID>
   topicID: <EVENTS_TOPIC_ID>
-setup: 
+setup:
   keyID: <REGISTRY_ENCRYPTION_KEY_ID>
   subscriberID: <REGISTRY_ID>
   url: <REGISTRY_URL>
-  domain: beckn_network 
+  domain: beckn_network

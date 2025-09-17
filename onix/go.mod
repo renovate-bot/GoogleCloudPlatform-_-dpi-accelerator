@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/secretmanager v1.14.6
 	cloud.google.com/go/storage v1.50.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/beckn/beckn-onix v0.0.0-20250723163319-cdb9deb9cdec
+	github.com/beckn/beckn-onix v1.0.0
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-git/go-git/v5 v5.16.2

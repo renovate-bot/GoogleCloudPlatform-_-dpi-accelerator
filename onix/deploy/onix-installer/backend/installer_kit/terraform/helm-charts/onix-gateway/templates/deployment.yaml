@@ -20,7 +20,7 @@ metadata:
   labels:
     {{- include "onix-gateway.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
@@ -52,6 +52,8 @@ spec:
           env:
             - name: CONFIG_FILE
               value: "/mnt/gcs/configs/gateway.yaml" # Mounts config from GCS
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: gcs-bucket
               mountPath: /mnt/gcs
