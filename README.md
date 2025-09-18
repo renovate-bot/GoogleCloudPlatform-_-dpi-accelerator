@@ -48,6 +48,11 @@ This section details how to get the beckn-onix components up and running.
 
 ### Prerequisities
 
+### Configuration
+Each Onix component (Gateway, Registry, Adapters) is configured using its own YAML file. These files allow you to set up server ports, logging levels, and service-specific parameters like database connections, timeouts and cache settings etc.
+
+For a detailed explanation of all available configuration values for each component, please refer to the [Onix Configuration README](./onix/configs/README.md).
+
 
 ### Installing for Existing Networks
 
