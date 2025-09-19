@@ -1,6 +1,6 @@
 module github.com/google/dpi-accelerator/beckn-onix
 
-go 1.24
+go 1.24.0
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.17.1
@@ -10,7 +10,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/beckn/beckn-onix v1.0.0
 	github.com/doug-martin/goqu/v9 v9.19.0
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/go-redis/redismock/v9 v9.2.0
 	github.com/google/go-cmp v0.7.0
