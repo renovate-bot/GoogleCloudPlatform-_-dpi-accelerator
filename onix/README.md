@@ -1,4 +1,4 @@
-# BECKN-ONIX
+# GCP BECKN-ONIX
 This project contains the core components for setting up a Beckn-compliant network, including the BAP Adapter, BPP Adapter, Registry, and Gateway. It provides a foundational framework to facilitate seamless interaction and data exchange within the Beckn Protocol ecosystem.
 
 
@@ -38,29 +38,13 @@ The Beckn Protocol is an open-source, open-network protocol designed to enable t
    * Handling message validation and security checks.
    * Ensuring efficient and reliable message delivery across the network.
 
-
-
-## Architecture Diagram
-
-
-## Installation and Configuration
-This section details how to get the beckn-onix components up and running.
-
-### Prerequisities
+## Installation
+Refer to [install guide](./deploy/onix-installer/README.md).
 
 ### Configuration
 Each Onix component (Gateway, Registry, Adapters) is configured using its own YAML file. These files allow you to set up server ports, logging levels, and service-specific parameters like database connections, timeouts and cache settings etc.
 
 For a detailed explanation of all available configuration values for each component, please refer to the [Onix Configuration README](./onix/configs/README.md).
-
-
-### Installing for Existing Networks
-
-
-### Installing for New Networks
-
-
-## Local Development (Customizing and Building)
 
 
 ## Licensing
