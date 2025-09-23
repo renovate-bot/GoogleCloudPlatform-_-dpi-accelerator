@@ -4,6 +4,8 @@
 
 The **BECKN Onix GCP Installer** automates the provisioning of infrastructure and application deployment for your BECKN ecosystem. It simplifies setup by managing cloud resources and deploying necessary components.
 
+For a detailed developer guide, please look at [Onix Installer Developer Guide](https://docs.google.com/document/d/1U5gAA4AOUQV5RHYMeM41YW4JYaDEkW87wq_c3DQ-cIU/edit?resourcekey=0-vp7RQSqCutxy8ORAaVjGzA&tab=t.0#heading=h.ggruvyc1rfuz)
+
 ---
 
 ## Prerequisites
