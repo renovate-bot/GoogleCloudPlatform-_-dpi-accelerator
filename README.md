@@ -1,70 +1,43 @@
-# BECKN-ONIX
-This project contains the core components for setting up a Beckn-compliant network, including the BAP Adapter, BPP Adapter, Registry, and Gateway. It provides a foundational framework to facilitate seamless interaction and data exchange within the Beckn Protocol ecosystem.
+# DPI Accelerator
+
+This suite of open-source software accelerates the adoption of Digital Public Infrastructure (DPI). It provides a "DPI-as-a-Service" (DaaS) model with pre-packaged, cloud-ready components that allow nations to rapidly launch DPI pilots and bypass lengthy and costly traditional procurement and build cycles. The suite includes products like the Beckn Onix open network accelerator (GA) and ADK-based conversational agents (in private preview). Each deployment is an application layer innovation built on GCP stack, driving consumption of core infrastructure, data services, and advanced AI capabilities.
+
+The primary project in this repository is **Onix**, an accelerator for building and deploying [Beckn](https://becknprotocol.io/)-compliant networks on Google Cloud.
+
+## Onix: A Beckn Network Accelerator
+
+Onix is a complete solution for deploying a Beckn network on Google Cloud. 
+Beckn is an open protocol that enables location-aware, local commerce across industries. It allows consumers and providers to discover each other and engage in transactions on a decentralized network. This project implements the core components needed to create such a network. For a deeper dive into the reference implementation, visit the [official beckn-onix repository](https://github.com/Beckn-One/beckn-onix/).
+
+It consists following:
+
+1.  **Core Beckn Services**: A set of microservices written in Go that form the backbone of the network (Registry, Gateway, Adapters).
+2.  **Onix Installer**: A web-based application that automates the entire deployment process, from provisioning GCP infrastructure with Terraform to deploying the core services with Helm.
+3.  **Plugins**: These are GCP based pluggable modules for beckn-onix to have extensible and configurable functionalities in beckn-environment.
+
+### Key Features
+
+-   **Automated Deployment**: A simple, UI-driven workflow to get a full Beckn network running in minutes.
+-   **Extensible Architecture**: A plugin-based system for adapters allows for custom logic and integrations.
+-   **Cloud Native**: Designed to run on Google Cloud, leveraging services like GKE, Cloud SQL, and Pub/Sub.
 
 
-## Beckn Components
-The Beckn Protocol is an open-source, open-network protocol designed to enable the discovery and fulfillment of services in a decentralized manner. This project implements key components necessary to participate in a Beckn network.
+For a more detailed technical overview of the Onix components, see the **[Onix Project README](./onix/README.md)**.
 
-1. BAP Adapter
-   The BAP (Buyer App) Adapter acts as an intermediary for Buyer Applications. It is responsible for:
+## Getting Started
 
-   * Translating requests from a Buyer Application into Beckn-compliant messages.
-   * Routing these messages to the appropriate Gateway.
-   * Receiving responses from the network and translating them back for the Buyer App.
-   * Essentially, it allows any application to seamlessly integrate with the Beckn network as a BAP.
+The recommended way to deploy Onix is through the UI-based Onix installer. For detailed prerequisites and instructions, please refer to the **[Onix Installer README](./onix/deploy/onix-installer/README.md)**.
 
-1. BPP Adapter
-   The BPP (Seller App) Adapter serves as the interface for Seller Applications. Its primary functions include:
+## Repository Structure
 
-   * Receiving Beckn-compliant requests (e.g., search, order) from the network via the Gateway.
-   * Translating these requests into a format compliant as per the Seller App.
-   * Sending responses from the Seller Application back to the network in a Beckn-compliant manner.
-   * This component enables seller-side applications to expose their services and products on the Beckn
-   network.
-
-1. Registry
-   The Registry is a crucial component that maintains a decentralized database of all participants (BAPs, BPPs, Gateways) in a Beckn network. Its key roles are:
-
-   * Storing public keys and network addresses of registered entities.
-   * Enabling discovery of network participants by other components.
-   * Ensuring the authenticity and security of communication within the network through
-   cryptographic verification.
-
-1. Gateway
-   The Gateway acts as a central routing point within a Beckn network, facilitating communication between different participants. Its responsibilities include:
-
-   * Receiving requests from BAP Adapters and routing them to the appropriate BPP Adapters based on
-   information from the Registry.
-   * Handling message validation and security checks.
-   * Ensuring efficient and reliable message delivery across the network.
-
-
-
-## Architecture Diagram
-
-
-## Installation and Configuration
-This section details how to get the beckn-onix components up and running.
-
-### Prerequisities
-
-### Configuration
-Each Onix component (Gateway, Registry, Adapters) is configured using its own YAML file. These files allow you to set up server ports, logging levels, and service-specific parameters like database connections, timeouts and cache settings etc.
-
-For a detailed explanation of all available configuration values for each component, please refer to the [Onix Configuration README](./onix/configs/README.md).
-
-
-### Installing for Existing Networks
-
-
-### Installing for New Networks
-
-
-## Local Development (Customizing and Building)
-
+-   `onix/`: Contains the core Onix project.
+    -   `cmd/`: Main applications for each microservice.
+    -   `deploy/onix-installer/`: The UI-based installer (Angular frontend, FastAPI backend, Terraform and Helm for deployments).
+    -   `internal/`: Shared business logic for the Onix services.
+    -   `plugins/`: Source code for the extensible plugins used by the adapters.
+    -   `configs/`: Detailed example configuration files for each service.
+    -   `onixctl/`: A command-line tool for building adapter/plugin artifacts.
 
 ## Licensing
 
-* See [LICENSE](LICENSE)
-
-
+This project is licensed under the Apache 2.0 License. See the [LICENSE](./LICENSE) file for details.
