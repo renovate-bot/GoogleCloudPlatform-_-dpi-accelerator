@@ -76,7 +76,7 @@ pool_labels = {
   service = "adapter"
 }
 machine_type  = "{{ "n2-standard-4" if deployment_size == "small" else "n2-standard-8" }}"
-node_count    = 2
+node_count    = 1
 min_node_count = 1
 max_node_count = 8
 
