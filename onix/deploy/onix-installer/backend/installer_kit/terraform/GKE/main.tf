@@ -24,6 +24,10 @@ resource "google_container_cluster" "primary_cluster" {
     # If "FALSE" then the cluster can be deleted using terraform destroy
     # Default is "TRUE"
 
+    node_config {
+        disk_size_gb = 20
+    }
+
     addons_config {
         gcp_filestore_csi_driver_config {
             enabled = var.gcp_filestore_csi_driver_config
