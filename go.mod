@@ -1,4 +1,4 @@
-module github.com/google/dpi-accelerator/beckn-onix
+module github.com/google/dpi-accelerator-beckn-onix
 
 go 1.24.0
 

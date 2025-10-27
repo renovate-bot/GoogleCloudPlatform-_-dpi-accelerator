@@ -191,7 +191,7 @@ Before running the installer, you need to build and push the required Docker ima
 
 3.  Build and run `onixctl` to build the adapter image and plugins:
     ```bash
-    go build ./cmd/onixctl && cd ..
+    go build ./cmd/onixctl
     ./onixctl --config deploy/onix-installer/adapter_artifacts/source.yaml
     ```
 
