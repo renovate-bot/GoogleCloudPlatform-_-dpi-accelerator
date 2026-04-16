@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -273,7 +273,7 @@ func TestServeHttp_QueueTaskError(t *testing.T) {
 		t.Errorf("ServeHttp() status code = %v, want %v", rr.Code, http.StatusInternalServerError)
 	}
 	var errResp model.TxnResponse
-    _ = json.Unmarshal(rr.Body.Bytes(), &errResp)
+	_ = json.Unmarshal(rr.Body.Bytes(), &errResp)
 	if errResp.Message.Error.Code != "QUEUEING_FAILED" {
 		t.Errorf("Error Code = %q, want %q", errResp.Message.Error.Code, "QUEUEING_FAILED")
 	}

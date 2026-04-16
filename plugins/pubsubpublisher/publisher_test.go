@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@ package pubsubpublisher
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/pubsub/pstest"
+	"cloud.google.com/go/pubsub" //lint:ignore SA1019 v2 is not yet available in google3, see yaqs/2071311681450934272
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc"
 )
 
 func setupTestServer(t *testing.T, ctx context.Context, projectID string) (*pubsub.Client, *pstest.Server) {
@@ -185,6 +186,46 @@ func TestPublisherError(t *testing.T) {
 			}
 			if tc.errorContains != "" && !strings.Contains(err.Error(), tc.errorContains) {
 				t.Fatalf("expected error containing %q, got %v", tc.errorContains, err)
+			}
+		})
+	}
+}
+
+func TestValidate_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     *Config
+		wantErr error
+	}{
+		{"nil config", nil, ErrEmptyConfig},
+		{"empty project", &Config{ProjectID: "", TopicIDs: []string{"topic"}}, ErrProjectMissing},
+		{"no topics", &Config{ProjectID: "project", TopicIDs: []string{}}, ErrTopicMissing},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validate(tt.cfg); !errors.Is(err, tt.wantErr) {
+				t.Errorf("validate() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidate_ErrorPaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     *Config
+		wantErr error
+	}{
+		{"nil config", nil, ErrEmptyConfig},
+		{"missing project", &Config{ProjectID: "", TopicIDs: []string{"t"}}, ErrProjectMissing},
+		{"missing topics", &Config{ProjectID: "p", TopicIDs: []string{}}, ErrTopicMissing},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validate(tt.cfg)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("validate() error = %v, want %v", err, tt.wantErr)
 			}
 		})
 	}

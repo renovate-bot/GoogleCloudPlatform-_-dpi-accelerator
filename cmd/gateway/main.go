@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,26 +35,27 @@ import (
 	keyManager "github.com/google/dpi-accelerator-beckn-onix/plugins/inmemorysecretkeymanager"
 	"github.com/google/dpi-accelerator-beckn-onix/plugins/rediscache"
 
-	beckn "github.com/beckn/beckn-onix/core/module/client"
-	"github.com/beckn/beckn-onix/pkg/plugin/implementation/signer"
-	"github.com/beckn/beckn-onix/pkg/plugin/implementation/signvalidator"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
+
+	beckn "github.com/beckn-one/beckn-onix/core/module/client"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/signer"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/signvalidator"
 )
 
 // config represents application configuration.
 type config struct {
-	Log                       *log.Config                  `yaml:"log"`
-	Timeouts                  *timeoutConfig               `yaml:"timeouts"`
-	Server                    *serverConfig                `yaml:"server"`
-	ProjectID                 string                       `yaml:"projectID"`
-	KeyManagerCacheTTL        *keyManager.CacheTTL         `yaml:"keyManagerCacheTTL"`
-	Registry                  *client.RegistryClientConfig `yaml:"registry"`
-	RedisAddr                 string                       `yaml:"redisAddr"`
-	MaxConcurrentFanoutTasks  int                          `yaml:"maxConcurrentFanoutTasks"`
-	TaskQueueWorkersCount     int                          `yaml:"taskQueueWorkersCount"`
-	TaskQueueBufferSize       int                          `yaml:"taskQueueBufferSize"`
-	SubscriberID              string                       `yaml:"subscriberID"`
-	HTTPClientRetry           *service.RetryConfig         `yaml:"httpClientRetry"`
+	Log                      *log.Config                  `yaml:"log"`
+	Timeouts                 *timeoutConfig               `yaml:"timeouts"`
+	Server                   *serverConfig                `yaml:"server"`
+	ProjectID                string                       `yaml:"projectID"`
+	KeyManagerCacheTTL       *keyManager.CacheTTL         `yaml:"keyManagerCacheTTL"`
+	Registry                 *client.RegistryClientConfig `yaml:"registry"`
+	RedisAddr                string                       `yaml:"redisAddr"`
+	MaxConcurrentFanoutTasks int                          `yaml:"maxConcurrentFanoutTasks"`
+	TaskQueueWorkersCount    int                          `yaml:"taskQueueWorkersCount"`
+	TaskQueueBufferSize      int                          `yaml:"taskQueueBufferSize"`
+	SubscriberID             string                       `yaml:"subscriberID"`
+	HTTPClientRetry          *service.RetryConfig         `yaml:"httpClientRetry"`
 }
 
 type serverConfig struct {
@@ -140,7 +141,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 	if err := log.Setup(cfg.Log); err != nil {
-		return err
+		return fmt.Errorf("failed to setup log: %w", err)
 	}
 
 	// Initialize Signature Validator (used by TxnSignValidator)
@@ -209,7 +210,7 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create registry client: %w", err)
 	}
-	channelTaskQ, err := service.NewChannelTaskQueue(cfg.TaskQueueWorkersCount, ctx, pTaskProcessor, nil, cfg.TaskQueueBufferSize) // Lookup processor will be set later
+	channelTaskQ, err := service.NewChannelTaskQueue(ctx, cfg.TaskQueueWorkersCount, pTaskProcessor, nil, cfg.TaskQueueBufferSize) // Lookup processor will be set later
 	if err != nil {
 		return fmt.Errorf("failed to create channel task queue: %w", err)
 	}

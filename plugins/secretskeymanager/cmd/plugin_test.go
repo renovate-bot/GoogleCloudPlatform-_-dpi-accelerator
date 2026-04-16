@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,23 +17,24 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	keymgr "github.com/google/dpi-accelerator-beckn-onix/plugins/secretskeymanager"
 
-	"github.com/beckn/beckn-onix/pkg/model"
-	plugin "github.com/beckn/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/model"
+	plugin "github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 )
 
 // mockKeyManager is a fake KeyManager that does nothing.
 type mockKeyManager struct{}
 
-func (m *mockKeyManager) GenerateKeyset() (*model.Keyset, error)       { return nil, nil }
+func (m *mockKeyManager) GenerateKeyset() (*model.Keyset, error)                    { return nil, nil }
 func (m *mockKeyManager) InsertKeyset(context.Context, string, *model.Keyset) error { return nil }
-func (m *mockKeyManager) Keyset(context.Context, string) (*model.Keyset, error) { return nil, nil }
-func (m *mockKeyManager) DeleteKeyset(context.Context, string) error      { return nil }
+func (m *mockKeyManager) Keyset(context.Context, string) (*model.Keyset, error)     { return nil, nil }
+func (m *mockKeyManager) DeleteKeyset(context.Context, string) error                { return nil }
 func (m *mockKeyManager) LookupNPKeys(context.Context, string, string) (string, string, error) {
 	return "", "", nil
 }
@@ -172,6 +173,23 @@ func TestKeyMgrProviderNewErrors(t *testing.T) {
 				t.Errorf("expected error containing '%s', got '%v'", tt.errContains, err)
 			}
 		})
+	}
+}
+
+func TestKeyMgrProviderNew_ErrorPath(t *testing.T) {
+	config := map[string]string{"projectID": "test"}
+	originalNewKeyManager := newKeyManager
+	defer func() { newKeyManager = originalNewKeyManager }()
+
+	mockErr := fmt.Errorf("mock initialization error")
+	newKeyManager = func(ctx context.Context, cache plugin.Cache, registry plugin.RegistryLookup, cfg *keymgr.Config) (plugin.KeyManager, func() error, error) {
+		return nil, nil, mockErr
+	}
+
+	provider := keyMgrProvider{}
+	_, _, err := provider.New(context.Background(), &mockCache{}, &mockRegistry{}, config)
+	if !strings.Contains(err.Error(), mockErr.Error()) {
+		t.Errorf("New() error = %v, want error containing %v", err, mockErr)
 	}
 }
 

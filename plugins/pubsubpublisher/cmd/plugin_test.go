@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/pubsub/pstest"
+	"cloud.google.com/go/pubsub" //lint:ignore SA1019 v2 is not yet available in google3, see yaqs/2071311681450934272
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc"
 )
 
 func setupTestServer(t *testing.T, ctx context.Context, projectID string) (*pubsub.Client, *pstest.Server) {
@@ -194,4 +194,3 @@ func TestProviderNewError(t *testing.T) {
 		})
 	}
 }
-

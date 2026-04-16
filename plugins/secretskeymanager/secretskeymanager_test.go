@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import (
 
 	secretmanagerpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 
-	"github.com/beckn/beckn-onix/pkg/model"
-	plugin "github.com/beckn/beckn-onix/pkg/plugin/definition" // Plugin definitions will be imported from here.
+	"github.com/beckn-one/beckn-onix/pkg/model"
+	plugin "github.com/beckn-one/beckn-onix/pkg/plugin/definition" // Plugin definitions will be imported from here.
 
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/grpc/codes"
@@ -112,7 +112,7 @@ func (m *mockRegistry) Lookup(ctx context.Context, req *model.Subscription) ([]m
 }
 
 func TestNew(t *testing.T) {
- t.Run("valid config", func(t *testing.T) {
+	t.Run("valid config", func(t *testing.T) {
 		cfg := &Config{
 			ProjectID: "test-project",
 		}
@@ -168,7 +168,7 @@ func TestNewErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err :=  newWithClient(tt.cache, tt.reg, tt.cfg, &mockSecretMgr{})
+			_, _, err := newWithClient(tt.cache, tt.reg, tt.cfg, &mockSecretMgr{})
 			if err == nil {
 				t.Fatalf("expected error, got nil")
 			}

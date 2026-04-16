@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,15 +23,16 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/doug-martin/goqu/v9"
-	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-
-	"github.com/google/dpi-accelerator-beckn-onix/pkg/model"
-
 	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv5"
+
+	// Import postgres dialect for goqu.
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
+	"github.com/doug-martin/goqu/v9"
+	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
+
+	"github.com/google/dpi-accelerator-beckn-onix/pkg/model"
 )
 
 // Predefined errors for config validation.
@@ -54,13 +55,13 @@ const subscriptionsTableName = "subscriptions"
 
 // registry implements the lookUpRepository interface using PostgreSQL.
 type Config struct {
-	User             string        `yaml:"user"`
-	Name             string        `yaml:"name"`             // Database name.
-	ConnectionName   string        `yaml:"connectionName"`   // Cloud SQL connection name.
-	MaxOpenConns     int           `yaml:"maxOpenConns"`     // Maximum number of open connections to the database.
-	MaxIdleConns     int           `yaml:"maxIdleConns"`     // Maximum number of connections in the idle connection pool.
-	ConnMaxIdleTime  time.Duration `yaml:"connMaxIdleTime"`  // Maximum amount of time a connection may be idle.
-	ConnMaxLifetime  time.Duration `yaml:"connMaxLifetime"`  // Maximum amount of time a connection may be reused.
+	User            string        `yaml:"user"`
+	Name            string        `yaml:"name"`            // Database name.
+	ConnectionName  string        `yaml:"connectionName"`  // Cloud SQL connection name.
+	MaxOpenConns    int           `yaml:"maxOpenConns"`    // Maximum number of open connections to the database.
+	MaxIdleConns    int           `yaml:"maxIdleConns"`    // Maximum number of connections in the idle connection pool.
+	ConnMaxIdleTime time.Duration `yaml:"connMaxIdleTime"` // Maximum amount of time a connection may be idle.
+	ConnMaxLifetime time.Duration `yaml:"connMaxLifetime"` // Maximum amount of time a connection may be reused.
 }
 
 type registry struct {
@@ -514,7 +515,7 @@ func (r *registry) UpsertSubscriptionAndLRO(ctx context.Context, sub *model.Subs
 			slog.ErrorContext(ctx, "transaction rollback failed", "error", err)
 		}
 	}()
-	
+
 	if err := r.upsertSubscription(ctx, tx, sub); err != nil {
 		return nil, nil, err
 	}

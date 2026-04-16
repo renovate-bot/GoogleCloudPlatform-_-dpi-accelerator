@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ import (
 
 // Workspace manages the temporary directory where modules are checked out and built.
 type Workspace struct {
-	path string
+	path   string
+	runner CommandRunner
 }
 
 // NewWorkspace creates a new temporary workspace.
@@ -36,7 +37,10 @@ func NewWorkspace() (*Workspace, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp workspace directory: %w", err)
 	}
-	return &Workspace{path: tmpDir}, nil
+	return &Workspace{
+		path:   tmpDir,
+		runner: &OSCommandRunner{},
+	}, nil
 }
 
 // Path returns the absolute path of the workspace directory.
@@ -125,6 +129,24 @@ func (w *Workspace) PrepareModules(modules []Module) error {
 				return fmt.Errorf("failed to copy module root for %s: %w", module.Name, err)
 			}
 		}
+
+		// Copy local Dockerfiles if specified
+		for _, image := range module.Images {
+			if _, err := os.Stat(image.Dockerfile); err == nil {
+				fmt.Printf("Found local Dockerfile %s, copying to module workspace...\n", image.Dockerfile)
+				input, err := os.ReadFile(image.Dockerfile)
+				if err != nil {
+					return fmt.Errorf("failed to read local dockerfile %s: %w", image.Dockerfile, err)
+				}
+				destDockerfilePath := filepath.Join(destPath, image.Dockerfile)
+				if err := os.MkdirAll(filepath.Dir(destDockerfilePath), 0755); err != nil {
+					return fmt.Errorf("failed to create directory for local dockerfile: %w", err)
+				}
+				if err := os.WriteFile(destDockerfilePath, input, 0644); err != nil {
+					return fmt.Errorf("failed to copy dockerfile to module workspace: %w", err)
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -165,5 +187,5 @@ func (w *Workspace) runCommand(dir, name string, args ...string) error {
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return w.runner.Run(cmd)
 }

@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/dpi-accelerator-beckn-onix/plugins/pubsubpublisher"
 
-	"github.com/beckn/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 )
 
 type pubsubPublisherProvider struct{}
@@ -51,3 +51,5 @@ func (p pubsubPublisherProvider) New(ctx context.Context, config map[string]stri
 }
 
 var Provider = pubsubPublisherProvider{}
+
+func main() {}

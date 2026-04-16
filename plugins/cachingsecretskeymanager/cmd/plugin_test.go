@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,28 +21,28 @@ import (
 	"time"
 
 	keymgr "github.com/google/dpi-accelerator-beckn-onix/plugins/cachingsecretskeymanager"
-	"github.com/beckn/beckn-onix/pkg/model"
-	plugin "github.com/beckn/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/model"
+	plugin "github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 )
 
 // mockKeyManager is a fake KeyManager that does nothing.
 type mockKeyManager struct{}
 
-func (m *mockKeyManager) GenerateKeyset() (*model.Keyset, error)       { return nil, nil }
+func (m *mockKeyManager) GenerateKeyset() (*model.Keyset, error)                    { return nil, nil }
 func (m *mockKeyManager) InsertKeyset(context.Context, string, *model.Keyset) error { return nil }
-func (m *mockKeyManager) Keyset(context.Context, string) (*model.Keyset, error) { return nil, nil }
-func (m *mockKeyManager) DeleteKeyset(context.Context, string) error      { return nil }
+func (m *mockKeyManager) Keyset(context.Context, string) (*model.Keyset, error)     { return nil, nil }
+func (m *mockKeyManager) DeleteKeyset(context.Context, string) error                { return nil }
 func (m *mockKeyManager) LookupNPKeys(context.Context, string, string) (string, string, error) {
 	return "", "", nil
 }
 
 func TestParseConfig(t *testing.T) {
 	tests := []struct {
-		name                        string
-		config                      map[string]string
-		wantProjectID               string
-		wantSubscriberKeysCache     bool
-		wantNetworkKeysCache        bool
+		name                    string
+		config                  map[string]string
+		wantProjectID           string
+		wantSubscriberKeysCache bool
+		wantNetworkKeysCache    bool
 	}{
 		{
 			name:                    "default no caching flags",
@@ -216,6 +216,66 @@ func TestKeyMgrProviderNewErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKeyMgrProviderNew_NilCacheDisablesFlags(t *testing.T) {
+	config := map[string]string{
+		"projectID":             "test-project",
+		"cachingSubscriberKeys": "true",
+		"cachingNetworkKeys":    "true",
+	}
+
+	originalNewKeyManager := newKeyManager
+	defer func() { newKeyManager = originalNewKeyManager }()
+
+	var capturedCfg *keymgr.Config
+	newKeyManager = func(ctx context.Context, cache plugin.Cache, registry plugin.RegistryLookup, cfg *keymgr.Config) (plugin.KeyManager, func() error, error) {
+		capturedCfg = cfg
+		return &mockKeyManager{}, func() error { return nil }, nil
+	}
+
+	provider := keyMgrProvider{}
+	_, _, err := provider.New(context.Background(), nil, &mockRegistry{}, config)
+	if err != nil {
+		t.Fatalf("New() failed unexpectedly: %v", err)
+	}
+	if capturedCfg == nil {
+		t.Fatal("capturedCfg is nil, expected it to be populated by newKeyManager")
+	}
+
+	if capturedCfg.SubscriberKeysCache || capturedCfg.NetworkKeysCache {
+		t.Error("New() with nil cache expected caching flags to be false, but they were true")
+	}
+}
+
+func TestKeyMgrProviderNew_EdgeCases(t *testing.T) {
+	provider := keyMgrProvider{}
+	ctx := context.Background()
+
+	t.Run("invalid boolean in config", func(t *testing.T) {
+		cfg := map[string]string{"projectID": "p", "cachingSubscriberKeys": "not-a-bool"}
+		_, _, err := provider.New(ctx, &mockCache{}, &mockRegistry{}, cfg)
+		if err == nil || !strings.Contains(err.Error(), "invalid value for cachingSubscriberKeys") {
+			t.Errorf("New() with bad bool expected error, got %v", err)
+		}
+	})
+
+	t.Run("nil cache disables flags", func(t *testing.T) {
+		original := newKeyManager
+		defer func() { newKeyManager = original }()
+
+		var captured *keymgr.Config
+		newKeyManager = func(ctx context.Context, c plugin.Cache, r plugin.RegistryLookup, cfg *keymgr.Config) (plugin.KeyManager, func() error, error) {
+			captured = cfg
+			return &mockKeyManager{}, func() error { return nil }, nil
+		}
+
+		config := map[string]string{"projectID": "p", "cachingSubscriberKeys": "true"}
+		_, _, _ = provider.New(ctx, nil, &mockRegistry{}, config)
+		if captured.SubscriberKeysCache {
+			t.Error("Expected SubscriberKeysCache to be disabled when cache is nil")
+		}
+	})
 }
 
 // mockCache implements the Cache interface for testing.

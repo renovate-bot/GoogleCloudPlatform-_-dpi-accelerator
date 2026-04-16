@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,3 +42,11 @@ setup:
   subscriberID: <REGISTRY_ID>
   url: <REGISTRY_URL>
   domain: beckn_network
+auth:
+  allowedAudience: <OIDC_AUDIENCE>
+  allowedIssuers:
+    - <OIDC_ISSUER_1>
+    - <OIDC_ISSUER_2>
+  allowedSAs:
+    - <ALLOWED_SA_1>
+    - <ALLOWED_SA_2>

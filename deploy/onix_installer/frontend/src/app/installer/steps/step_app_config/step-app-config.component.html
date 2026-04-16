@@ -1,0 +1,351 @@
+<!--
+ Copyright 2026 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<div class="step-content app-deploy-step-content">
+  <div class="app-deploy-config">
+    <h2>Configure Your Onix Components</h2>
+    <p class="subtitle">
+      Configure the final BAP/BPP settings and deploy the application.
+    </p>
+
+    <!-- Global API Error Banner (Outside of Tabs for guaranteed visibility) -->
+    <div *ngIf="configGenerationError" class="error-message" style="color: #b71c1c; background-color: #ffebee; border: 1px solid #f44336; padding: 12px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ configGenerationError }}</span>
+    </div>
+
+    <mat-tab-group class="component-config-tabs" #componentConfigTabs [(selectedIndex)]="currentInternalStep">
+      
+      <!-- IMAGE CONFIG TAB -->
+      <mat-tab label="Image Config">
+        <ng-template matTabContent>
+          <form [formGroup]="imageConfigForm" class="config-form single-column">
+            <p>Please provide the container image URLs for the selected components.</p>
+
+            <mat-form-field appearance="outline"
+              *ngIf="installerState.deploymentGoal.all || installerState.deploymentGoal.registry">
+              <mat-label>Registry Image URL</mat-label>
+              <input matInput formControlName="registryImageUrl">
+              <mat-error *ngIf="getErrorMessage(imageConfigForm.get('registryImageUrl'), 'Registry Image URL')">
+                {{ getErrorMessage(imageConfigForm.get('registryImageUrl'), 'Registry Image URL') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline"
+              *ngIf="installerState.deploymentGoal.all || installerState.deploymentGoal.registry">
+              <mat-label>Registry Admin Image URL</mat-label>
+              <input matInput formControlName="registryAdminImageUrl">
+              <mat-error
+                *ngIf="getErrorMessage(imageConfigForm.get('registryAdminImageUrl'), 'Registry Admin Image URL')">
+                {{ getErrorMessage(imageConfigForm.get('registryAdminImageUrl'), 'Registry Admin Image URL') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" *ngIf="showGatewayTab">
+              <mat-label>Gateway Image URL</mat-label>
+              <input matInput formControlName="gatewayImageUrl">
+              <mat-error *ngIf="getErrorMessage(imageConfigForm.get('gatewayImageUrl'), 'Gateway Image URL')">
+                {{ getErrorMessage(imageConfigForm.get('gatewayImageUrl'), 'Gateway Image URL') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" *ngIf="showAdapterTab">
+              <mat-label>Adapter Image URL (BAP/BPP)</mat-label>
+              <input matInput formControlName="adapterImageUrl">
+              <mat-error *ngIf="getErrorMessage(imageConfigForm.get('adapterImageUrl'), 'Adapter Image URL (BAP/BPP)')">
+                {{ getErrorMessage(imageConfigForm.get('adapterImageUrl'), 'Adapter Image URL (BAP/BPP)') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" *ngIf="showGatewayTab || showAdapterTab">
+              <mat-label>Subscription Image URL</mat-label>
+              <input matInput formControlName="subscriptionImageUrl">
+              <mat-error *ngIf="getErrorMessage(imageConfigForm.get('subscriptionImageUrl'), 'Subscription Image URL')">
+                {{ getErrorMessage(imageConfigForm.get('subscriptionImageUrl'), 'Subscription Image URL') }}
+              </mat-error>
+            </mat-form-field>
+          </form>
+
+          <div class="tab-navigation-buttons">
+            <button mat-stroked-button color="primary" (click)="onPreviousTab()" [disabled]="isGeneratingConfigs">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Back</span>
+            </button>
+            <button mat-stroked-button color="primary" (click)="onNextTab()" [disabled]="!isCurrentMainTabValid() || isGeneratingConfigs"
+              *ngIf="!isLastConfigTabActive()"> <span>Next</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+            <button mat-flat-button color="accent" class="deploy-button"
+              [disabled]="!isAppConfigValid || isGeneratingConfigs" (click)="proceedToConfigGeneration()"
+              *ngIf="isLastConfigTabActive()">
+              <div class="button-content-wrapper">
+                <mat-spinner *ngIf="isGeneratingConfigs" diameter="20"></mat-spinner>
+                <span>{{ isGeneratingConfigs ? 'Generating...' : 'Generate Config' }}</span>
+              </div>
+            </button>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- REGISTRY CONFIG TAB -->
+      <mat-tab label="Registry Config">
+        <ng-template matTabContent>
+          <form [formGroup]="registryConfigForm" class="config-form single-column">
+            <p>Registry specific settings for deployment.</p>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Registry URL</mat-label>
+              <input matInput formControlName="registryUrl" placeholder="https://registry.example.com">
+              <mat-error *ngIf="getErrorMessage(registryConfigForm.get('registryUrl'), 'Registry URL')">
+                {{ getErrorMessage(registryConfigForm.get('registryUrl'), 'Registry URL') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Key ID</mat-label>
+              <input matInput formControlName="registryKeyId" placeholder="your-key-id">
+              <mat-error *ngIf="getErrorMessage(registryConfigForm.get('registryKeyId'), 'Key ID')">
+                {{ getErrorMessage(registryConfigForm.get('registryKeyId'), 'Key ID') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Subscriber ID</mat-label>
+              <input matInput formControlName="registrySubscriberId" placeholder="your-subscriber-id">
+              <mat-error *ngIf="getErrorMessage(registryConfigForm.get('registrySubscriberId'), 'Subscriber ID')">
+                {{ getErrorMessage(registryConfigForm.get('registrySubscriberId'), 'Subscriber ID') }}
+              </mat-error>
+            </mat-form-field>
+
+            <mat-checkbox formControlName="enableAutoApprover" class="auto-approver-checkbox">
+              Enable Auto Approver (for Registry)
+              <mat-icon
+                matTooltip="Enables automatic approval of new subscriber registrations in the Registry.">info</mat-icon>
+            </mat-checkbox>
+          </form>
+
+          <div class="tab-navigation-buttons">
+            <button mat-stroked-button color="primary" (click)="onPreviousTab()" [disabled]="isGeneratingConfigs">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Back</span>
+            </button>
+            <button mat-stroked-button color="primary" (click)="onNextTab()" [disabled]="!isCurrentMainTabValid() || isGeneratingConfigs"
+              *ngIf="!isLastConfigTabActive()"> <span>Next</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+            <button mat-flat-button color="accent" class="deploy-button"
+              [disabled]="!isAppConfigValid || isGeneratingConfigs" (click)="proceedToConfigGeneration()"
+              *ngIf="isLastConfigTabActive()">
+              <div class="button-content-wrapper">
+                <mat-spinner *ngIf="isGeneratingConfigs" diameter="20"></mat-spinner>
+                <span>{{ isGeneratingConfigs ? 'Generating...' : 'Generate Config' }}</span>
+              </div>
+            </button>
+          </div>  
+        </ng-template>
+      </mat-tab>
+
+      <!-- GATEWAY CONFIG TAB -->
+      <mat-tab label="Gateway Config" *ngIf="showGatewayTab">
+        <ng-template matTabContent>
+          <form [formGroup]="gatewayConfigForm" class="config-form single-column">
+            <p>Gateway specific settings for deployment.</p>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Subscription ID</mat-label>
+              <input matInput formControlName="gatewaySubscriptionId" placeholder="e.g., your-subscription-id">
+              <mat-error *ngIf="getErrorMessage(gatewayConfigForm.get('gatewaySubscriptionId'), 'Subscription ID')">
+                {{ getErrorMessage(gatewayConfigForm.get('gatewaySubscriptionId'), 'Subscription ID') }}
+              </mat-error>
+            </mat-form-field>
+          </form>
+
+          <div class="tab-navigation-buttons">
+            <button mat-stroked-button color="primary" (click)="onPreviousTab()" [disabled]="isGeneratingConfigs">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Back</span>
+            </button>
+            <button mat-stroked-button color="primary" (click)="onNextTab()" [disabled]="!isCurrentMainTabValid() || isGeneratingConfigs"
+              *ngIf="!isLastConfigTabActive()"> <span>Next</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+            <button mat-flat-button color="accent" class="deploy-button"
+              [disabled]="!isAppConfigValid || isGeneratingConfigs" (click)="proceedToConfigGeneration()"
+              *ngIf="isLastConfigTabActive()">
+              <div class="button-content-wrapper">
+                <mat-spinner *ngIf="isGeneratingConfigs" diameter="20"></mat-spinner>
+                <span>{{ isGeneratingConfigs ? 'Generating...' : 'Generate Config' }}</span>
+              </div>
+            </button>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- ADAPTER CONFIG TAB -->
+      <mat-tab label="Adapter Config" *ngIf="showAdapterTab">
+        <ng-template matTabContent>
+          <form [formGroup]="adapterConfigForm" class="config-form single-column">
+            <h3>Schema Configuration</h3>
+
+            <mat-checkbox formControlName="enableSchemaValidation" class="schema-validation-checkbox">
+              Enable L2 Schema Validation
+            </mat-checkbox>
+          </form>
+
+          <div class="tab-navigation-buttons">
+            <button mat-stroked-button color="primary" (click)="onPreviousTab()" [disabled]="isGeneratingConfigs">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Back</span>
+            </button>
+            <button mat-flat-button color="accent" class="deploy-button"
+              [disabled]="!isAppConfigValid || isGeneratingConfigs" (click)="proceedToConfigGeneration()"
+              *ngIf="isLastConfigTabActive()">
+              <div class="button-content-wrapper">
+                <mat-spinner *ngIf="isGeneratingConfigs" diameter="20"></mat-spinner>
+                <span>{{ isGeneratingConfigs ? 'Generating...' : 'Generate Config' }}</span>
+              </div>
+            </button>
+            <button mat-stroked-button color="primary" (click)="onNextTab()" [disabled]="!isCurrentMainTabValid() || isGeneratingConfigs"
+              *ngIf="!isLastConfigTabActive()"> <span>Next</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <!-- SECURITY CONFIG TAB -->
+      <mat-tab label="Security Config">
+        <ng-template matTabContent>
+          <form [formGroup]="securityConfigForm" class="config-form single-column">
+            <div class="security-section">
+                <h3 style="font-size: 16px; font-weight: 500; margin-bottom: 20px; color: #202124;">
+                  Internal API Authentication
+                </h3>
+                  
+                  <div class="radio-option" style="margin-bottom: 20px;">
+                    <mat-slide-toggle formControlName="enableInBoundAuth" color="primary" style="margin-bottom: 10px; padding: 5px;" hideIcon>
+                      <span style="margin-left: 5px; font-weight: 500; font-size: 15px; color: #202124;">Enable Inbound Authentication</span>
+                    </mat-slide-toggle>
+                    <p style="margin: 4px 0 0 32px; font-size: 14px; color: #5f6368; margin-bottom: 5px;">
+                      Protects access to specific interfaces, including Registry Admin APIs (for subscription handling), Subscriber Service APIs (for managing participant details), and Adapter Caller APIs. When enabled, callers will need to provide a valid authentication token.
+                    </p>
+                    <div *ngIf="securityConfigForm.get('enableInBoundAuth')?.value" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; background-color: #fff;">
+                      <div style="margin-bottom: 20px;">
+                        <mat-form-field appearance="outline" style="width: 100%; font-size: 14px;">
+                          <mat-label>Issuer URL</mat-label>
+                          <input matInput type="text" formControlName="issuerUrl" placeholder="https://example.com">
+                        </mat-form-field>
+                      </div>
+
+                      <div>
+                        
+                        <div class="form-field-wrapper" style="margin-bottom: 24px;">
+                          <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #202124;">
+                            JWK file (JSON) <span style="color: #9aa0a6; font-weight: 400;">(Optional)</span>
+                          </label>
+
+                          <input type="file" #jwkFileInput hidden accept=".json" (change)="onJwkFileSelected($event)">
+
+                          <div class="custom-file-upload" 
+                               style="display: flex; align-items: center; border: 1px solid #dadce0; border-radius: 4px; overflow: hidden; background: white; cursor: pointer; transition: border-color 0.2s;"
+                               (click)="jwkFileInput.click()">
+                            
+                            <div class="browse-btn" style="background-color: #f8f9fa; padding: 12px 24px; border-right: 1px solid #dadce0; font-weight: 500; color: #3c4043; font-size: 14px;">
+                              Browse
+                            </div>
+                            
+                            <div class="file-name-display" [ngStyle]="{'color': selectedJwkFileName ? '#202124' : '#9aa0a6'}" style="padding: 12px 16px; flex-grow: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                              {{ selectedJwkFileName || 'No file selected' }}
+                            </div>
+
+                            <div *ngIf="selectedJwkFileName" 
+                                 (click)="clearJwkFile($event)" 
+                                 matTooltip="Remove file"
+                                 style="padding: 8px 12px; display: flex; align-items: center; justify-content: center; color: #5f6368; cursor: pointer;"
+                                 onmouseover="this.style.color='#d32f2f'" 
+                                 onmouseout="this.style.color='#5f6368'">
+                              <mat-icon style="font-size: 20px; width: 20px; height: 20px;">close</mat-icon>
+                            </div>
+                          </div>
+                          
+                          <!-- SPECIFIC FILE ERRORS (e.g. Invalid JSON/comments) -->
+                          <mat-error *ngIf="securityConfigForm.get('jwksFile')?.hasError('invalidJson')" style="font-size: 12px; margin-top: 8px; display: block;">
+                            The selected file is not a valid JSON file. Please ensure it contains no comments.
+                          </mat-error>
+                          <mat-error *ngIf="securityConfigForm.get('jwksFile')?.hasError('fileReadError')" style="font-size: 12px; margin-top: 8px; display: block;">
+                            There was an error reading the file.
+                          </mat-error>
+
+                        </div>
+
+                        <div>
+                          <mat-form-field appearance="outline" style="width: 100%; font-size: 14px;">
+                            <mat-label>Identity Claim</mat-label>
+                            <input matInput type="text" formControlName="idclaim" placeholder="e.g., sub or arn">
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" style="width: 100%; font-size: 14px;">
+                            <mat-label>Allowed Values</mat-label>
+                            <input matInput type="text" formControlName="allowedValues" placeholder="arn:aws:iam::123:role/Svc-A">
+                          </mat-form-field>
+                        </div>
+                      </div>
+                    </div>
+                    
+                  </div>
+
+                  <div class="radio-option">
+                    <mat-slide-toggle formControlName="enableOutBoundAuth" color="primary" style="margin-bottom: 10px; padding: 5px;" hideIcon>
+                      <span style="margin-left: 5px; font-weight: 500; font-size: 15px; color: #202124;">Enable Outbound Authentication</span>
+                    </mat-slide-toggle>
+                    <p style="margin: 4px 0 0 32px; font-size: 14px; color: #5f6368; margin-bottom: 5px;">
+                      Secures calls made from the Onix Adapter to your backend client application. When enabled, the Adapter will automatically add an authentication token to outgoing requests.
+                    </p>
+
+                    <div *ngIf="securityConfigForm.get('enableOutBoundAuth')?.value" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; background-color: #fff;">
+                      <div style="margin-bottom: 0px;">
+                        
+                        <mat-form-field appearance="outline" style="width: 100%; font-size: 14px;">
+                          <mat-label>Audience Overrides (optional)</mat-label>
+                          <input matInput type="text" formControlName="audOverrides" placeholder="api://onix-adapter-client-id">
+                        </mat-form-field>
+                      </div>
+                    </div>
+                    
+                  </div>
+            </div>
+
+          </form>
+
+          <div class="tab-navigation-buttons">
+            <button mat-stroked-button color="primary" (click)="onPreviousTab()" [disabled]="isGeneratingConfigs">
+              <mat-icon>arrow_back</mat-icon>
+              <span>Back</span>
+            </button>
+            
+            <button mat-flat-button color="accent" class="deploy-button"
+              [disabled]="!isAppConfigValid || isGeneratingConfigs" (click)="proceedToConfigGeneration()">
+              <div class="button-content-wrapper">
+                <mat-spinner *ngIf="isGeneratingConfigs" diameter="20"></mat-spinner>
+                <span>{{ isGeneratingConfigs ? 'Generating...' : 'Generate Config' }}</span>
+              </div>
+            </button>
+          </div>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+
+  </div>
+</div>

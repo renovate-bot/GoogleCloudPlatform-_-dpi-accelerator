@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ type adminHandler interface {
 }
 
 // NewRouter configures and returns the Chi router for the Admin service functionalities.
-func NewRouter(lroh adminHandler) *chi.Mux {
+func NewRouter(lroh adminHandler, oidcMiddleware func(http.Handler) http.Handler) *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)
@@ -42,6 +42,10 @@ func NewRouter(lroh adminHandler) *chi.Mux {
 		fmt.Fprint(w, `{"status":"ok"}`)
 	})
 
-	router.Post("/operations/action", lroh.HandleSubscriptionAction)
+	if oidcMiddleware != nil {
+		router.With(oidcMiddleware).Post("/operations/action", lroh.HandleSubscriptionAction)
+	} else {
+		router.Post("/operations/action", lroh.HandleSubscriptionAction)
+	}
 	return router
 }

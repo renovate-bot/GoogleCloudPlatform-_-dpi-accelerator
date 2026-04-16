@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ func TestEventPublisher_PublishSubscriptionRequestApprovedEvent(t *testing.T) {
 
 func TestEventPublisher_PublishSubscriptionRequestRejectedEvent(t *testing.T) {
 	ctx := context.Background()
-	req := &model.LRO{} 
+	req := &model.LRO{}
 	expectedMsgID := "test-msg-id"
 	expectedErr := errors.New("test error")
 

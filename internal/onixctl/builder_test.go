@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package onixctl
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,13 +27,30 @@ import (
 // MockCommandRunner is a mock for testing that captures the command.
 type MockCommandRunner struct {
 	CommandsRun [][]string
+	FailOnArgs  []string
 	ShouldError error
 }
 
 // Run captures the command arguments instead of executing them.
 func (m *MockCommandRunner) Run(cmd *exec.Cmd) error {
 	m.CommandsRun = append(m.CommandsRun, cmd.Args)
-	return m.ShouldError
+
+	// If FailOnArgs is set, check for matching arguments
+	if len(m.FailOnArgs) > 0 {
+		match := true
+		for i, arg := range m.FailOnArgs {
+			if i >= len(cmd.Args) || cmd.Args[i] != arg {
+				match = false
+				break
+			}
+		}
+		if match {
+			return m.ShouldError
+		}
+		return nil // Success if args don't match
+	}
+
+	return m.ShouldError // Default behavior (return error if provided)
 }
 
 func TestZipAndCopyPlugins(t *testing.T) {
@@ -88,15 +104,9 @@ func TestZipAndCopyPlugins_NoPlugins(t *testing.T) {
 
 func TestNewBuilder(t *testing.T) {
 	config := &Config{
-		Output: "./test-output",
+		Output: t.TempDir(),
 	}
 	wsPath := t.TempDir()
-	defer func() {
-		if err := os.RemoveAll(config.Output); err != nil {
-			// Replace 'log.Printf' with your actual project's logger if needed
-			log.Printf("Error cleaning up output directory %s: %v", config.Output, err)
-		}
-	}()
 
 	builder, err := NewBuilder(config, wsPath)
 	require.NoError(t, err)
@@ -132,10 +142,73 @@ func TestBuildPluginsInDocker(t *testing.T) {
 		"docker", "run", "--rm", "--platform", "linux/amd64",
 		"-v", wsPath + ":/workspace",
 		"-w", "/workspace",
-		"golang:1.24-bullseye",
+		"golang:1.24-bookworm",
 		"sh", "./build_plugins.sh",
 	}
 	assert.Equal(t, expectedCmdPrefix, mockRunner.CommandsRun[0])
+}
+
+func TestBuildImagesLocally_WithLocalDockerfile(t *testing.T) {
+	// 1. Setup
+	mockRunner := &MockCommandRunner{}
+	ws, err := NewWorkspace()
+	require.NoError(t, err)
+	defer ws.Close()
+	wsPath := ws.Path()
+
+	// Temporarily chdir to a temp directory since Bazel tests run in readonly directories.
+	originalWd, _ := os.Getwd()
+	tmpWd := t.TempDir()
+	require.NoError(t, os.Chdir(tmpWd))
+	defer os.Chdir(originalWd) // ensure clean state
+
+	tempDockerfile := "TestDockerfile.custom"
+	require.NoError(t, os.WriteFile(tempDockerfile, []byte("FROM scratch"), 0644))
+
+	config := &Config{
+		Modules: []Module{
+			{
+				Name:    "local-module",
+				Path:    tmpWd,
+				DirName: "app",
+				Images: map[string]Image{
+					"myimage": {Dockerfile: tempDockerfile, Tag: "v1"},
+				},
+			},
+		},
+	}
+
+	// Let Workspace do its preparation
+	err = ws.PrepareModules(config.Modules)
+	require.NoError(t, err)
+
+	builder := &Builder{
+		config:        config,
+		workspacePath: wsPath,
+		runner:        mockRunner,
+	}
+
+	// 2. Execute
+	err = builder.buildImagesLocally()
+
+	// 3. Assert
+	require.NoError(t, err)
+	// Check that the file was actually copied into the module workspace (app directory)
+	copiedDockerfilePath := filepath.Join(wsPath, "app", tempDockerfile)
+	assert.FileExists(t, copiedDockerfilePath)
+
+	content, err := os.ReadFile(copiedDockerfilePath)
+	require.NoError(t, err)
+	assert.Equal(t, string(content), "FROM scratch")
+
+	require.Len(t, mockRunner.CommandsRun, 1, "Expected only the build command")
+
+	expectedBuildCmd := []string{
+		"docker", "buildx", "build", "--platform", "linux/amd64", "--load",
+		"-t", "myimage:v1",
+		"-f", tempDockerfile, ".",
+	}
+	assert.Equal(t, expectedBuildCmd, mockRunner.CommandsRun[0])
 }
 
 func TestBuildImagesLocally_WithRegistry(t *testing.T) {
@@ -395,17 +468,10 @@ func TestBuild_ZipFail(t *testing.T) {
 
 func TestNewBuilder_OutputDirCreationFail(t *testing.T) {
 	// 1. Setup
-	outPath := "./test-output"
+	outPath := filepath.Join(t.TempDir(), "test-output")
 	// Create a file where the directory should be
 	_, err := os.Create(outPath)
 	require.NoError(t, err)
-
-	defer func() {
-		if err := os.RemoveAll(outPath); err != nil {
-			// Replace 'log.Printf' with your actual project's logger if needed
-			log.Printf("Error cleaning up output directory %s: %v", outPath, err)
-		}
-	}()
 
 	config := &Config{
 		Output: outPath,

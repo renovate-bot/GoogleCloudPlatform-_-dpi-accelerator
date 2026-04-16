@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -256,7 +256,7 @@ func TestChannelLookupProcessor_Process(t *testing.T) {
 				mockQueuer.err = errors.New("queue is full")
 			},
 			wantErrMsg:     "failed to queue proxy task for subscriber",
-			wantQueueCalls: 2,                                           // It will be called for both subscribers
+			wantQueueCalls: 2, // It will be called for both subscribers
 		},
 		{
 			name: "error - task queuing fails on second subscriber",
